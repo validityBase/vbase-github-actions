@@ -30,10 +30,9 @@ with:
 
 ### notifications
 
-Sends workflow notifications without storing secrets in this repository. It can
-send through `vbase-common` notification routing or directly to a Slack webhook.
-
-Using `vbase-common`:
+Sends workflow notifications through `vbase_common.notifications.notifiers`.
+Slack, email, or Slack+email delivery is configured by the caller-provided
+`VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` secret.
 
 ```yaml
 - name: Send failure notification
@@ -42,7 +41,6 @@ Using `vbase-common`:
     VBASE_NOTIFICATIONS_JSON_DESCRIPTOR: ${{ secrets.VBASE_NOTIFICATIONS_JSON_DESCRIPTOR }}
     VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
   with:
-    provider: vbase-common
     title: "Workflow failed"
     message: |
       Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -51,19 +49,9 @@ Using `vbase-common`:
       {"workflow":"example"}
 ```
 
-Using a Slack webhook:
-
-```yaml
-- name: Send Slack notification
-  uses: validityBase/vbase-github-actions/.github/actions/notifications@v1
-  env:
-    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  with:
-    provider: slack-webhook
-    title: "Workflow failed"
-    message: |
-      Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-```
+`notification-level` supports `NONPRD`, `PRD`, and `PRD_CRITICAL`. The selected
+level controls Slack webhook routing inside `vbase-common`; email recipients are
+read from the descriptor and may be extended with `recipients-json`.
 
 ### publish-docs
 
@@ -92,3 +80,35 @@ Breaking changes require a new major release ref such as `@v2`.
 This repository is public. Do not commit secret values, webhook URLs, private
 tokens, or repository-specific private configuration. Secrets must be supplied by
 caller workflows.
+
+## Reusable Workflows
+
+### publish-docs
+
+Reusable workflow for docs publishing jobs that share the same checkout,
+optional dependency setup, optional docs build command, and central docs publish
+step.
+
+```yaml
+jobs:
+  update-main-docs:
+    uses: validityBase/vbase-github-actions/.github/workflows/publish-docs.yml@v1
+    with:
+      python-version: "3.11"
+      requirements-files: |
+        docs/requirements.txt
+      pre-publish-command: |
+        sphinx-build -b markdown docs/ docs/_build/markdown
+      pre-publish-shell: bash
+      source-docs-path: docs/_build/markdown
+    secrets:
+      DOCS_REPO_ACCESS_TOKEN: ${{ secrets.DOCS_REPO_ACCESS_TOKEN }}
+```
+
+For repositories with custom docs generation, put that logic in
+`pre-publish-command` and pass the generated directory through
+`source-docs-path`. If docs requirements need private `vbase-common` access,
+also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
+Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
+Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
+and `cmd`.

@@ -1,12 +1,8 @@
 name: Send notification
-description: Send workflow notifications through vbase-common or a Slack webhook.
+description: Send Slack and email workflow notifications through vbase-common.
 # cspell:ignore pipefail
 
 inputs:
-  provider:
-    description: Notification provider to use. Supported values are vbase-common and slack-webhook.
-    required: false
-    default: vbase-common
   title:
     description: Notification title.
     required: true
@@ -21,6 +17,10 @@ inputs:
     description: JSON object with metadata to attach to vbase-common notifications.
     required: false
     default: "{}"
+  recipients-json:
+    description: JSON array of additional email recipients.
+    required: false
+    default: "[]"
   vbase-common-ref:
     description: Git ref of validityBase/vbase-common to install for notification helpers.
     required: false
@@ -32,83 +32,49 @@ runs:
     - name: Send notification
       shell: bash
       env:
-        NOTIFICATION_PROVIDER: ${{ inputs.provider }}
         NOTIFICATION_TITLE: ${{ inputs.title }}
         NOTIFICATION_MESSAGE: ${{ inputs.message }}
         NOTIFICATION_LEVEL: ${{ inputs.notification-level }}
         NOTIFICATION_METADATA_JSON: ${{ inputs.metadata-json }}
+        NOTIFICATION_RECIPIENTS_JSON: ${{ inputs.recipients-json }}
         VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
       run: |
         set -euo pipefail
 
-        case "$NOTIFICATION_PROVIDER" in
-          vbase-common)
-            if [ -z "${VBASE_NOTIFICATIONS_JSON_DESCRIPTOR:-}" ]; then
-              echo "VBASE_NOTIFICATIONS_JSON_DESCRIPTOR must be provided by the caller." >&2
-              exit 1
-            fi
+        if [ -z "${VBASE_NOTIFICATIONS_JSON_DESCRIPTOR:-}" ]; then
+          echo "VBASE_NOTIFICATIONS_JSON_DESCRIPTOR must be provided by the caller." >&2
+          exit 1
+        fi
 
-            if [ -z "${VBASE_COMMON_REPO_READ_TOKEN:-}" ]; then
-              echo "VBASE_COMMON_REPO_READ_TOKEN must be provided by the caller." >&2
-              exit 1
-            fi
+        if [ -z "${VBASE_COMMON_REPO_READ_TOKEN:-}" ]; then
+          echo "VBASE_COMMON_REPO_READ_TOKEN must be provided by the caller." >&2
+          exit 1
+        fi
 
-            python -m pip install --quiet "git+https://${VBASE_COMMON_REPO_READ_TOKEN}@github.com/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
+        python -m pip install --quiet "git+https://${VBASE_COMMON_REPO_READ_TOKEN}@github.com/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
 
-            python3 - <<'PY'
-            import json
-            import os
+        python3 - <<'PY'
+        import json
+        import os
 
-            from vbase_common.notifications.notifiers import (
-                NotificationLevel,
-                send_notification,
-            )
+        from vbase_common.notifications.notifiers import (
+            NotificationLevel,
+            send_notification,
+        )
 
-            metadata = json.loads(os.environ["NOTIFICATION_METADATA_JSON"])
-            if not isinstance(metadata, dict):
-                raise ValueError("metadata-json must be a JSON object")
+        metadata = json.loads(os.environ["NOTIFICATION_METADATA_JSON"])
+        if not isinstance(metadata, dict):
+            raise ValueError("metadata-json must be a JSON object")
 
-            send_notification(
-                title=os.environ["NOTIFICATION_TITLE"],
-                message=os.environ["NOTIFICATION_MESSAGE"],
-                notification_level=NotificationLevel(os.environ["NOTIFICATION_LEVEL"]),
-                metadata=metadata,
-            )
-            PY
-            ;;
-          slack-webhook)
-            if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
-              echo "SLACK_WEBHOOK_URL must be provided by the caller." >&2
-              exit 1
-            fi
+        recipients = json.loads(os.environ["NOTIFICATION_RECIPIENTS_JSON"])
+        if not isinstance(recipients, list):
+            raise ValueError("recipients-json must be a JSON array")
 
-            python3 - <<'PY'
-            import json
-            import os
-            import urllib.request
-
-            payload = json.dumps(
-                {
-                    "text": (
-                        f"*{os.environ['NOTIFICATION_TITLE']}*\n"
-                        f"{os.environ['NOTIFICATION_MESSAGE']}"
-                    )
-                }
-            ).encode("utf-8")
-
-            request = urllib.request.Request(
-                os.environ["SLACK_WEBHOOK_URL"],
-                data=payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            with urllib.request.urlopen(request, timeout=30) as response:
-                if response.status >= 400:
-                    raise RuntimeError(f"Slack webhook returned HTTP {response.status}")
-            PY
-            ;;
-          *)
-            echo "Unsupported notification provider: $NOTIFICATION_PROVIDER" >&2
-            exit 1
-            ;;
-        esac
+        send_notification(
+            title=os.environ["NOTIFICATION_TITLE"],
+            message=os.environ["NOTIFICATION_MESSAGE"],
+            notification_level=NotificationLevel(os.environ["NOTIFICATION_LEVEL"]),
+            metadata=metadata,
+            recipients=recipients,
+        )
+        PY

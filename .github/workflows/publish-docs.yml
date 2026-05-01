@@ -1,0 +1,162 @@
+name: Publish Docs
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub runner label.
+        required: false
+        type: string
+        default: ubuntu-latest
+      python-version:
+        description: Optional Python version to set up.
+        required: false
+        type: string
+        default: ""
+      requirements-files:
+        description: Optional newline-separated Python requirements files to install.
+        required: false
+        type: string
+        default: ""
+      node-version:
+        description: Optional Node.js version to set up.
+        required: false
+        type: string
+        default: ""
+      node-cache:
+        description: Optional actions/setup-node cache mode, for example npm.
+        required: false
+        type: string
+        default: ""
+      pre-publish-command:
+        description: Optional command that builds or prepares docs before publishing.
+        required: false
+        type: string
+        default: ""
+      pre-publish-shell:
+        description: Shell used to run pre-publish-command.
+        required: false
+        type: string
+        default: bash
+      source-docs-path:
+        description: Source documentation folder to publish.
+        required: false
+        type: string
+        default: docs
+      target-docs-path:
+        description: Optional target docs path in the central docs repository.
+        required: false
+        type: string
+        default: ""
+      target-repository:
+        description: Target documentation repository.
+        required: false
+        type: string
+        default: validityBase/docs
+      target-repository-branch:
+        description: Optional target documentation repository branch.
+        required: false
+        type: string
+        default: ""
+      preprocess-plant-uml:
+        description: Whether publish-docs should preprocess PlantUML diagrams.
+        required: false
+        type: string
+        default: "true"
+      resolve-absolute-links-repos:
+        description: Optional newline-separated repositories whose absolute GitHub links should be rewritten.
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DOCS_REPO_ACCESS_TOKEN:
+        description: Token that can push to the target documentation repository.
+        required: true
+      VBASE_COMMON_REPO_READ_TOKEN:
+        description: Optional token for installing private vbase-common dependencies.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish-docs:
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+
+      - name: Set up Node.js with cache
+        if: inputs.node-version != '' && inputs.node-cache != ''
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.node-cache }}
+
+      - name: Set up Node.js
+        if: inputs.node-version != '' && inputs.node-cache == ''
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Set up Python and install dependencies
+        if: inputs.requirements-files != ''
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        uses: validityBase/vbase-github-actions/.github/actions/setup-python-deps@v1
+        with:
+          requirements-files: ${{ inputs.requirements-files }}
+          python-version: ${{ inputs.python-version || '3.11' }}
+
+      - name: Run pre-publish command with bash
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'bash'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: bash
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with sh
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'sh'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: sh
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with pwsh
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'pwsh'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: pwsh
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with powershell
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'powershell'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: powershell
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with cmd
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'cmd'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: cmd
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Validate pre-publish shell
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell != 'bash' && inputs.pre-publish-shell != 'sh' && inputs.pre-publish-shell != 'pwsh' && inputs.pre-publish-shell != 'powershell' && inputs.pre-publish-shell != 'cmd'
+        run: |
+          echo "Unsupported pre-publish-shell: ${{ inputs.pre-publish-shell }}"
+          exit 1
+
+      - name: Publish Documents
+        uses: validityBase/vbase-github-actions/.github/actions/publish-docs@v1
+        with:
+          docs-repo-access-token: ${{ secrets.DOCS_REPO_ACCESS_TOKEN }}
+          source-docs-path: ${{ inputs.source-docs-path }}
+          target-docs-path: ${{ inputs.target-docs-path }}
+          target-repository: ${{ inputs.target-repository }}
+          target-repository-branch: ${{ inputs.target-repository-branch }}
+          preprocess-plant-uml: ${{ inputs.preprocess-plant-uml }}
+          resolve-absolute-links-repos: ${{ inputs.resolve-absolute-links-repos }}

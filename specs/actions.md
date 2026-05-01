@@ -20,15 +20,13 @@ caching to `actions/setup-python` with `cache: pip` and `cache-dependency-path`.
 
 Sends workflow notifications without embedding repository secrets.
 
-Supported providers:
-- `vbase-common`: uses `vbase_common.notifications.notifiers`.
-- `slack-webhook`: posts a simple text payload to a caller-provided Slack
-  webhook URL.
+The action uses `vbase_common.notifications.notifiers.send_notification()`.
+Delivery to Slack, email, or both is controlled by the caller-provided
+`VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` value.
 
 Caller-provided secrets:
-- `VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` for `vbase-common`.
+- `VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` for Slack/email configuration.
 - `VBASE_COMMON_REPO_READ_TOKEN` for installing `vbase-common`.
-- `SLACK_WEBHOOK_URL` for direct Slack webhook sends.
 
 The action must not log secret values or notification descriptors.
 
