@@ -110,3 +110,5 @@ For repositories with custom docs generation, put that logic in
 `source-docs-path`. If docs requirements need private `vbase-common` access,
 also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
+Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
+and `cmd`.

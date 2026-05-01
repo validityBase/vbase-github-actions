@@ -109,12 +109,46 @@ jobs:
           requirements-files: ${{ inputs.requirements-files }}
           python-version: ${{ inputs.python-version || '3.11' }}
 
-      - name: Run pre-publish command
-        if: inputs.pre-publish-command != ''
+      - name: Run pre-publish command with bash
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'bash'
         env:
           VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
-        shell: ${{ inputs.pre-publish-shell }}
+        shell: bash
         run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with sh
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'sh'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: sh
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with pwsh
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'pwsh'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: pwsh
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with powershell
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'powershell'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: powershell
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Run pre-publish command with cmd
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell == 'cmd'
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+        shell: cmd
+        run: ${{ inputs.pre-publish-command }}
+
+      - name: Validate pre-publish shell
+        if: inputs.pre-publish-command != '' && inputs.pre-publish-shell != 'bash' && inputs.pre-publish-shell != 'sh' && inputs.pre-publish-shell != 'pwsh' && inputs.pre-publish-shell != 'powershell' && inputs.pre-publish-shell != 'cmd'
+        run: |
+          echo "Unsupported pre-publish-shell: ${{ inputs.pre-publish-shell }}"
+          exit 1
 
       - name: Publish Documents
         uses: validityBase/vbase-github-actions/.github/actions/publish-docs@v1

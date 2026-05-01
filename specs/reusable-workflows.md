@@ -46,6 +46,8 @@ private configuration payloads.
 The workflow intentionally does not hardcode Sphinx, TypeDoc, MSBuild,
 Widdershins, or repository-specific patch commands. Those vary across
 repositories and are passed through `pre-publish-command`.
+Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
+and `cmd`.
 It accepts `DOCS_REPO_ACCESS_TOKEN` as a required secret and
 `VBASE_COMMON_REPO_READ_TOKEN` as an optional secret for private Python
 dependencies.
