@@ -30,10 +30,9 @@ with:
 
 ### notifications
 
-Sends workflow notifications without storing secrets in this repository. It can
-send through `vbase-common` notification routing or directly to a Slack webhook.
-
-Using `vbase-common`:
+Sends workflow notifications through `vbase_common.notifications.notifiers`.
+Slack, email, or Slack+email delivery is configured by the caller-provided
+`VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` secret.
 
 ```yaml
 - name: Send failure notification
@@ -42,7 +41,6 @@ Using `vbase-common`:
     VBASE_NOTIFICATIONS_JSON_DESCRIPTOR: ${{ secrets.VBASE_NOTIFICATIONS_JSON_DESCRIPTOR }}
     VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
   with:
-    provider: vbase-common
     title: "Workflow failed"
     message: |
       Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -51,19 +49,9 @@ Using `vbase-common`:
       {"workflow":"example"}
 ```
 
-Using a Slack webhook:
-
-```yaml
-- name: Send Slack notification
-  uses: validityBase/vbase-github-actions/.github/actions/notifications@v1
-  env:
-    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  with:
-    provider: slack-webhook
-    title: "Workflow failed"
-    message: |
-      Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-```
+`notification-level` supports `NONPRD`, `PRD`, and `PRD_CRITICAL`. The selected
+level controls Slack webhook routing inside `vbase-common`; email recipients are
+read from the descriptor and may be extended with `recipients-json`.
 
 ### publish-docs
 
