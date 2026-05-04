@@ -14,6 +14,16 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if [ ! -f package-lock.json ] || [ ! -r package-lock.json ]; then
+          echo "package-lock.json must exist and be readable in the repository root." >&2
+          exit 1
+        fi
+
     - name: Set up Node.js
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
       with:
@@ -33,4 +43,14 @@ runs:
 
         export CYPRESS_CACHE_FOLDER=~/.cache/Cypress
         npm ci --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000
-        npx cypress verify || npx cypress install
+
+        CYPRESS_BIN=./node_modules/.bin/cypress
+        if [ ! -x "$CYPRESS_BIN" ]; then
+          echo "Cypress binary was not installed by npm ci. Ensure cypress is in package-lock.json." >&2
+          exit 1
+        fi
+
+        if ! "$CYPRESS_BIN" verify; then
+          "$CYPRESS_BIN" install
+          "$CYPRESS_BIN" verify
+        fi

@@ -29,6 +29,11 @@ Optional inputs:
 The action assumes `package-lock.json` is in the caller repository root. It does
 not cache `node_modules` because `npm ci` removes and recreates it.
 
+The action validates that `package-lock.json` exists and is readable before any
+cache keys are evaluated. Cypress must come from the caller lockfile; the action
+runs `./node_modules/.bin/cypress` instead of `npx cypress`, verifies the cached
+binary, installs it if needed, and verifies it again.
+
 ## notifications
 
 Sends workflow notifications without embedding repository secrets.
