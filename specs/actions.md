@@ -16,6 +16,19 @@ Optional input:
 The action must not implement custom pip cache key calculation. It delegates pip
 caching to `actions/setup-python` with `cache: pip` and `cache-dependency-path`.
 
+## setup-cypress-deps
+
+Sets up Node.js, enables npm cache through `actions/setup-node`, caches the
+Cypress binary through `actions/cache`, installs npm dependencies, and verifies
+or installs Cypress.
+
+Optional inputs:
+- `node-version`: defaults to `24`.
+- `cypress-cache-key-suffix`: defaults to `v2`.
+
+The action assumes `package-lock.json` is in the caller repository root. It does
+not cache `node_modules` because `npm ci` removes and recreates it.
+
 ## notifications
 
 Sends workflow notifications without embedding repository secrets.

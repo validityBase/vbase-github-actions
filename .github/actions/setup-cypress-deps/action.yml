@@ -1,0 +1,36 @@
+name: Setup Cypress dependencies
+description: Set up Node.js, cache npm and Cypress binary, and install npm dependencies.
+
+inputs:
+  node-version:
+    description: Node.js version to set up.
+    required: false
+    default: "24"
+  cypress-cache-key-suffix:
+    description: Extra suffix for the Cypress binary cache key.
+    required: false
+    default: v2
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+
+    - name: Cache Cypress binary
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7  # actions/cache v5.0.4
+      with:
+        path: ~/.cache/Cypress
+        key: cypress-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ inputs.cypress-cache-key-suffix }}
+
+    - name: Install NPM dependencies and Cypress
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        export CYPRESS_CACHE_FOLDER=~/.cache/Cypress
+        npm ci --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000
+        npx cypress verify || npx cypress install

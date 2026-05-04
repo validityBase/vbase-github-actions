@@ -28,6 +28,21 @@ with:
   python-version: "3.11"
 ```
 
+### setup-cypress-deps
+
+Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
+dependencies with `npm ci`, and verifies or installs Cypress.
+
+```yaml
+- name: Install NPM dependencies and Cypress
+  uses: validityBase/vbase-github-actions/.github/actions/setup-cypress-deps@v1
+  with:
+    node-version: "24"
+```
+
+`node-version` defaults to `24`. Repositories that have not yet validated Node
+24 can pass their current version explicitly, for example `node-version: "18"`.
+
 ### notifications
 
 Sends workflow notifications through `vbase_common.notifications.notifiers`.
