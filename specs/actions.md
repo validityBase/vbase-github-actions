@@ -46,6 +46,16 @@ Caller-provided secrets:
 - `VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` for Slack/email configuration.
 - `VBASE_COMMON_REPO_READ_TOKEN` for installing `vbase-common`.
 
+Required inputs:
+- `title`
+- `message`
+
+Optional inputs:
+- `notification-level`: defaults to `NONPRD`.
+- `metadata-json`: JSON object, defaults to `{}`.
+- `recipients-json`: JSON array, defaults to `[]`.
+- `vbase-common-ref`: defaults to `main`.
+
 The action must not log secret values or notification descriptors.
 
 ## publish-docs

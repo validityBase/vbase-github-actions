@@ -31,7 +31,8 @@ with:
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
-dependencies with `npm ci`, and verifies or installs Cypress.
+dependencies with `npm ci`, and verifies or installs Cypress from the caller's
+lockfile.
 
 ```yaml
 - name: Install NPM dependencies and Cypress
@@ -42,6 +43,9 @@ dependencies with `npm ci`, and verifies or installs Cypress.
 
 `node-version` defaults to `24`. Repositories that have not yet validated Node
 24 can pass their current version explicitly, for example `node-version: "18"`.
+The caller repository must have a readable `package-lock.json` in its root.
+The optional `cypress-cache-key-suffix` input defaults to `v2` and can be bumped
+when the Cypress binary cache needs to be invalidated.
 
 ### notifications
 
@@ -64,14 +68,17 @@ Slack, email, or Slack+email delivery is configured by the caller-provided
       {"workflow":"example"}
 ```
 
-`notification-level` supports `NONPRD`, `PRD`, and `PRD_CRITICAL`. The selected
-level controls Slack webhook routing inside `vbase-common`; email recipients are
-read from the descriptor and may be extended with `recipients-json`.
+`notification-level` supports `NONPRD`, `PRD`, and `PRD_CRITICAL`. Delivery and
+routing are handled by `vbase-common` using the descriptor supplied by the
+caller. Email recipients are read from the descriptor and may be extended with
+`recipients-json`.
 
 ### publish-docs
 
 Publishes Markdown documentation from a product repository into the central docs
-repository.
+repository. Prefer the reusable `publish-docs.yml` workflow for full docs
+publishing jobs. Use this direct action only when the caller workflow needs to
+own checkout, build, or setup steps itself.
 
 ```yaml
 - name: Publish Documents
@@ -79,10 +86,14 @@ repository.
   with:
     docs-repo-access-token: ${{ secrets.DOCS_REPO_ACCESS_TOKEN }}
     source-docs-path: docs
+    target-repository-branch: main
 ```
 
 The action can optionally preprocess PlantUML diagrams and rewrite absolute
-GitHub repository links for the central documentation repository.
+GitHub repository links for the central documentation repository. If the target
+docs repository should always publish to `main`, pass
+`target-repository-branch: main`; otherwise the action defaults to the current
+product branch name.
 
 ## Release Policy
 
@@ -116,6 +127,7 @@ jobs:
         sphinx-build -b markdown docs/ docs/_build/markdown
       pre-publish-shell: bash
       source-docs-path: docs/_build/markdown
+      target-repository-branch: main
     secrets:
       DOCS_REPO_ACCESS_TOKEN: ${{ secrets.DOCS_REPO_ACCESS_TOKEN }}
 ```
