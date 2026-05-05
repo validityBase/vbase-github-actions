@@ -52,6 +52,17 @@ It accepts `DOCS_REPO_ACCESS_TOKEN` as a required secret and
 `VBASE_COMMON_REPO_READ_TOKEN` as an optional secret for private Python
 dependencies.
 
+Important inputs:
+- `requirements-files` enables shared Python dependency setup.
+- `node-version` and `node-cache` enable Node.js setup when docs generation
+  needs it.
+- `pre-publish-command` and `pre-publish-shell` run repository-specific docs
+  generation.
+- `source-docs-path`, `target-docs-path`, `target-repository`, and
+  `target-repository-branch` are passed through to the publish action.
+- `preprocess-plant-uml` and `resolve-absolute-links-repos` control publish
+  action preprocessing.
+
 Known local workflow variants:
 - Sphinx builds from `docs/` to `docs/_build/markdown`;
 - TypeDoc builds from TypeScript to `_docs`;
