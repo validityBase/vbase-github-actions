@@ -25,6 +25,7 @@ Optional inputs:
 - `node-version`: defaults to `20`.
 - `package-lock-path`: defaults to `package-lock.json`.
 - `working-directory`: defaults to `.`.
+- `npm-ci-args`: optional additional arguments passed to `npm ci`.
 
 The action validates that `working-directory` exists and that
 `package-lock-path` exists and is readable before npm cache setup and install.

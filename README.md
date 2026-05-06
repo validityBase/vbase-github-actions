@@ -44,7 +44,8 @@ the caller's lockfile, and installs dependencies with `npm ci`.
 `node-version` defaults to `20`, `package-lock-path` defaults to
 `package-lock.json`, and `working-directory` defaults to the repository root.
 Use `working-directory` plus a matching `package-lock-path` for projects whose
-Node package lives in a subdirectory.
+Node package lives in a subdirectory. Use `npm-ci-args` for repository-specific
+install flags such as `--prefer-offline --no-audit --no-fund`.
 
 ### setup-cypress-deps
 
