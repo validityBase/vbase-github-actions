@@ -1,0 +1,61 @@
+name: Setup Node dependencies
+description: Set up Node.js, enable npm cache, validate package-lock.json, and install dependencies.
+# cspell:ignore pipefail
+
+inputs:
+  node-version:
+    description: Node.js version to set up.
+    required: false
+    default: "20"
+  package-lock-path:
+    description: Path to the package-lock.json file used for npm cache and validation.
+    required: false
+    default: package-lock.json
+  working-directory:
+    description: Directory where npm ci should run.
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        PACKAGE_LOCK_PATH: ${{ inputs.package-lock-path }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$PACKAGE_LOCK_PATH" ]; then
+          echo "package-lock-path must not be empty" >&2
+          exit 1
+        fi
+
+        if [ -z "$WORKING_DIRECTORY" ]; then
+          echo "working-directory must not be empty" >&2
+          exit 1
+        fi
+
+        if [ ! -d "$WORKING_DIRECTORY" ]; then
+          echo "working-directory does not exist or is not a directory: $WORKING_DIRECTORY" >&2
+          exit 1
+        fi
+
+        if [ ! -f "$PACKAGE_LOCK_PATH" ] || [ ! -r "$PACKAGE_LOCK_PATH" ]; then
+          echo "package-lock-path contains a missing or unreadable file: $PACKAGE_LOCK_PATH" >&2
+          exit 1
+        fi
+
+    - name: Set up Node.js
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.package-lock-path }}
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+

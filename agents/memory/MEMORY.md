@@ -19,6 +19,7 @@ Actions and reusable workflows.
 ## Current Shared Actions
 
 - `.github/actions/setup-python-deps/action.yml`
+- `.github/actions/setup-node-deps/action.yml`
 - `.github/actions/setup-cypress-deps/action.yml`
 - `.github/actions/notifications/action.yml`
 - `.github/actions/publish-docs/action.yml`

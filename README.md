@@ -28,6 +28,24 @@ with:
   python-version: "3.11"
 ```
 
+### setup-node-deps
+
+Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
+the caller's lockfile, and installs dependencies with `npm ci`.
+
+```yaml
+- name: Set up Node.js and install dependencies
+  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v1
+  with:
+    node-version: "20"
+    package-lock-path: package-lock.json
+```
+
+`node-version` defaults to `20`, `package-lock-path` defaults to
+`package-lock.json`, and `working-directory` defaults to the repository root.
+Use `working-directory` plus a matching `package-lock-path` for projects whose
+Node package lives in a subdirectory.
+
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
