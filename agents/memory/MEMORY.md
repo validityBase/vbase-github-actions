@@ -26,3 +26,4 @@ Actions and reusable workflows.
 ## Current Reusable Workflows
 
 - `.github/workflows/publish-docs.yml`
+- `.github/workflows/python-lint.yml`

@@ -109,6 +109,29 @@ caller workflows.
 
 ## Reusable Workflows
 
+### python-lint
+
+Reusable workflow for Python pylint jobs that share checkout, Python setup,
+requirements installation, and a final pylint command.
+
+```yaml
+jobs:
+  run-pylint:
+    uses: validityBase/vbase-github-actions/.github/workflows/python-lint.yml@v1
+    with:
+      python-version: "3.11"
+      requirements-files: |
+        requirements/dev.txt
+      pylint-command: pylint --fail-under=8.0 $(git ls-files '*.py')
+    secrets:
+      PRIVATE_GITHUB_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+```
+
+Pass `PRIVATE_GITHUB_TOKEN` when requirements install private GitHub
+dependencies. The workflow configures `~/.netrc` and also exposes the token as
+`VBASE_COMMON_REPO_READ_TOKEN` and `VBASE_REPO_READ_TOKEN` for existing
+requirements files that use environment substitution.
+
 ### publish-docs
 
 Reusable workflow for docs publishing jobs that share the same checkout,
