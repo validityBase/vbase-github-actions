@@ -9,7 +9,7 @@ Primary instructions are in [CLAUDE.md](CLAUDE.md) - read that first.
 - Reusable workflows spec: [internal/specs/reusable-workflows.md](internal/specs/reusable-workflows.md)
 - Release policy: [internal/specs/release-policy.md](internal/specs/release-policy.md)
 
-## Codex Notes
+## Agent Notes
 
 - Prefer reusable workflows for full CI/CD processes and composite actions for
   focused reusable building blocks.
