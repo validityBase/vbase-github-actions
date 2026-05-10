@@ -8,7 +8,7 @@ inputs:
     required: false
     default: "20"
   package-lock-path:
-    description: Path to the package-lock.json file used for npm cache and validation.
+    description: Path to the package-lock.json file. Must match working-directory/package-lock.json.
     required: false
     default: package-lock.json
   working-directory:
@@ -46,8 +46,21 @@ runs:
           exit 1
         fi
 
+        WORKING_DIRECTORY_LOCKFILE="${WORKING_DIRECTORY%/}/package-lock.json"
+        if [ ! -f "$WORKING_DIRECTORY_LOCKFILE" ] || [ ! -r "$WORKING_DIRECTORY_LOCKFILE" ]; then
+          echo "working-directory must contain a readable package-lock.json for npm ci: $WORKING_DIRECTORY_LOCKFILE" >&2
+          exit 1
+        fi
+
         if [ ! -f "$PACKAGE_LOCK_PATH" ] || [ ! -r "$PACKAGE_LOCK_PATH" ]; then
           echo "package-lock-path contains a missing or unreadable file: $PACKAGE_LOCK_PATH" >&2
+          exit 1
+        fi
+
+        PACKAGE_LOCK_REALPATH="$(realpath "$PACKAGE_LOCK_PATH")"
+        WORKING_DIRECTORY_LOCKFILE_REALPATH="$(realpath "$WORKING_DIRECTORY_LOCKFILE")"
+        if [ "$PACKAGE_LOCK_REALPATH" != "$WORKING_DIRECTORY_LOCKFILE_REALPATH" ]; then
+          echo "package-lock-path must reference the same file npm ci will use: $WORKING_DIRECTORY_LOCKFILE" >&2
           exit 1
         fi
 
@@ -56,7 +69,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
-        cache-dependency-path: ${{ inputs.package-lock-path }}
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
 
     - name: Install dependencies
       shell: bash
@@ -65,4 +78,35 @@ runs:
         NPM_CI_ARGS: ${{ inputs.npm-ci-args }}
       run: |
         set -euo pipefail
-        npm ci $NPM_CI_ARGS
+
+        npm_ci_args=()
+        if [ -n "$NPM_CI_ARGS" ]; then
+          npm_ci_args_file="$(mktemp)"
+          cleanup_npm_ci_args_file() {
+            rm -f "$npm_ci_args_file"
+          }
+          trap cleanup_npm_ci_args_file EXIT
+
+          python3 - "$npm_ci_args_file" <<'PY'
+        import os
+        import shlex
+        import sys
+
+        try:
+            npm_ci_args = shlex.split(os.environ.get("NPM_CI_ARGS", ""))
+        except ValueError as exc:
+            print(f"Invalid npm-ci-args: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+        with open(sys.argv[1], "wb") as output:
+            for arg in npm_ci_args:
+                output.write(arg.encode())
+                output.write(b"\0")
+        PY
+
+          while IFS= read -r -d '' npm_ci_arg; do
+            npm_ci_args+=("$npm_ci_arg")
+          done < "$npm_ci_args_file"
+        fi
+
+        npm ci "${npm_ci_args[@]}"

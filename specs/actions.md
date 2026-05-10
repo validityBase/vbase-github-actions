@@ -28,8 +28,15 @@ Optional inputs:
 - `npm-ci-args`: optional additional arguments passed to `npm ci`.
 
 The action validates that `working-directory` exists and that
-`package-lock-path` exists and is readable before npm cache setup and install.
+`working-directory/package-lock.json` exists and is readable before npm cache
+setup and install. `package-lock-path` is retained as a compatibility input, but
+it must reference the same lockfile that `npm ci` will use. The npm cache key is
+tied to `working-directory/package-lock.json`.
+
 It must not cache `node_modules`; `npm ci` removes and recreates that directory.
+The action parses `npm-ci-args` as shell-style arguments and invokes `npm ci`
+with an array expansion so quoted values are preserved and glob patterns are not
+expanded by the shell.
 
 ## setup-cypress-deps
 
