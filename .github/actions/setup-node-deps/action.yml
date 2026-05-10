@@ -1,0 +1,112 @@
+name: Setup Node dependencies
+description: Set up Node.js, enable npm cache, validate package-lock.json, and install dependencies.
+# cspell:ignore pipefail
+
+inputs:
+  node-version:
+    description: Node.js version to set up.
+    required: false
+    default: "20"
+  package-lock-path:
+    description: Path to the package-lock.json file. Must match working-directory/package-lock.json.
+    required: false
+    default: package-lock.json
+  working-directory:
+    description: Directory where npm ci should run.
+    required: false
+    default: "."
+  npm-ci-args:
+    description: Optional additional arguments passed to npm ci.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        PACKAGE_LOCK_PATH: ${{ inputs.package-lock-path }}
+        WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$PACKAGE_LOCK_PATH" ]; then
+          echo "package-lock-path must not be empty" >&2
+          exit 1
+        fi
+
+        if [ -z "$WORKING_DIRECTORY" ]; then
+          echo "working-directory must not be empty" >&2
+          exit 1
+        fi
+
+        if [ ! -d "$WORKING_DIRECTORY" ]; then
+          echo "working-directory does not exist or is not a directory: $WORKING_DIRECTORY" >&2
+          exit 1
+        fi
+
+        WORKING_DIRECTORY_LOCKFILE="${WORKING_DIRECTORY%/}/package-lock.json"
+        if [ ! -f "$WORKING_DIRECTORY_LOCKFILE" ] || [ ! -r "$WORKING_DIRECTORY_LOCKFILE" ]; then
+          echo "working-directory must contain a readable package-lock.json for npm ci: $WORKING_DIRECTORY_LOCKFILE" >&2
+          exit 1
+        fi
+
+        if [ ! -f "$PACKAGE_LOCK_PATH" ] || [ ! -r "$PACKAGE_LOCK_PATH" ]; then
+          echo "package-lock-path contains a missing or unreadable file: $PACKAGE_LOCK_PATH" >&2
+          exit 1
+        fi
+
+        PACKAGE_LOCK_REALPATH="$(realpath "$PACKAGE_LOCK_PATH")"
+        WORKING_DIRECTORY_LOCKFILE_REALPATH="$(realpath "$WORKING_DIRECTORY_LOCKFILE")"
+        if [ "$PACKAGE_LOCK_REALPATH" != "$WORKING_DIRECTORY_LOCKFILE_REALPATH" ]; then
+          echo "package-lock-path must reference the same file npm ci will use: $WORKING_DIRECTORY_LOCKFILE" >&2
+          exit 1
+        fi
+
+    - name: Set up Node.js
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        NPM_CI_ARGS: ${{ inputs.npm-ci-args }}
+      run: |
+        set -euo pipefail
+
+        npm_ci_args=()
+        if [ -n "$NPM_CI_ARGS" ]; then
+          npm_ci_args_file="$(mktemp)"
+          cleanup_npm_ci_args_file() {
+            rm -f "$npm_ci_args_file"
+          }
+          trap cleanup_npm_ci_args_file EXIT
+
+          python3 - "$npm_ci_args_file" <<'PY'
+        import os
+        import shlex
+        import sys
+
+        try:
+            npm_ci_args = shlex.split(os.environ.get("NPM_CI_ARGS", ""))
+        except ValueError as exc:
+            print(f"Invalid npm-ci-args: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+        with open(sys.argv[1], "wb") as output:
+            for arg in npm_ci_args:
+                output.write(arg.encode())
+                output.write(b"\0")
+        PY
+
+          while IFS= read -r -d '' npm_ci_arg; do
+            npm_ci_args+=("$npm_ci_arg")
+          done < "$npm_ci_args_file"
+        fi
+
+        npm ci "${npm_ci_args[@]}"

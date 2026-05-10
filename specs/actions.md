@@ -16,6 +16,28 @@ Optional input:
 The action must not implement custom pip cache key calculation. It delegates pip
 caching to `actions/setup-python` with `cache: pip` and `cache-dependency-path`.
 
+## setup-node-deps
+
+Sets up Node.js, enables `actions/setup-node` built-in npm caching, validates
+the package lockfile, and installs dependencies with `npm ci`.
+
+Optional inputs:
+- `node-version`: defaults to `20`.
+- `package-lock-path`: defaults to `package-lock.json`.
+- `working-directory`: defaults to `.`.
+- `npm-ci-args`: optional additional arguments passed to `npm ci`.
+
+The action validates that `working-directory` exists and that
+`working-directory/package-lock.json` exists and is readable before npm cache
+setup and install. `package-lock-path` is retained as a compatibility input, but
+it must reference the same lockfile that `npm ci` will use. The npm cache key is
+tied to `working-directory/package-lock.json`.
+
+It must not cache `node_modules`; `npm ci` removes and recreates that directory.
+The action parses `npm-ci-args` as shell-style arguments and invokes `npm ci`
+with an array expansion so quoted values are preserved and glob patterns are not
+expanded by the shell.
+
 ## setup-cypress-deps
 
 Sets up Node.js, enables npm cache through `actions/setup-node`, caches the

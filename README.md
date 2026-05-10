@@ -28,6 +28,25 @@ with:
   python-version: "3.11"
 ```
 
+### setup-node-deps
+
+Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
+the caller's lockfile, and installs dependencies with `npm ci`.
+
+```yaml
+- name: Set up Node.js and install dependencies
+  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v1
+  with:
+    node-version: "20"
+    package-lock-path: package-lock.json
+```
+
+`node-version` defaults to `20`, `package-lock-path` defaults to
+`package-lock.json`, and `working-directory` defaults to the repository root.
+Use `working-directory` plus a matching `package-lock-path` for projects whose
+Node package lives in a subdirectory. Use `npm-ci-args` for repository-specific
+install flags such as `--prefer-offline --no-audit --no-fund`.
+
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
@@ -108,6 +127,29 @@ tokens, or repository-specific private configuration. Secrets must be supplied b
 caller workflows.
 
 ## Reusable Workflows
+
+### python-lint
+
+Reusable workflow for Python pylint jobs that share checkout, Python setup,
+requirements installation, and a final pylint command.
+
+```yaml
+jobs:
+  run-pylint:
+    uses: validityBase/vbase-github-actions/.github/workflows/python-lint.yml@v1
+    with:
+      python-version: "3.11"
+      requirements-files: |
+        requirements/dev.txt
+      pylint-command: pylint --fail-under=8.0 $(git ls-files '*.py')
+    secrets:
+      PRIVATE_GITHUB_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+```
+
+Pass `PRIVATE_GITHUB_TOKEN` when requirements install private GitHub
+dependencies. The workflow configures `~/.netrc` and also exposes the token as
+`VBASE_COMMON_REPO_READ_TOKEN` and `VBASE_REPO_READ_TOKEN` for existing
+requirements files that use environment substitution.
 
 ### publish-docs
 

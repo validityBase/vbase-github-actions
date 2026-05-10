@@ -1,0 +1,75 @@
+name: Python Lint
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub runner label.
+        required: false
+        type: string
+        default: ubuntu-latest
+      python-version:
+        description: Python version to set up.
+        required: false
+        type: string
+        default: "3.11"
+      requirements-files:
+        description: Newline-separated requirements files to install before linting.
+        required: true
+        type: string
+      pylint-command:
+        description: Command used to run pylint.
+        required: false
+        type: string
+        default: pylint $(git ls-files '*.py')
+      working-directory:
+        description: Directory where the pylint command should run.
+        required: false
+        type: string
+        default: "."
+    secrets:
+      PRIVATE_GITHUB_TOKEN:
+        description: Optional token for installing private GitHub dependencies.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  python-lint:
+    runs-on: ${{ inputs.runner }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+
+      - name: Configure GitHub package credentials
+        env:
+          PRIVATE_GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$PRIVATE_GITHUB_TOKEN" ]; then
+            echo "No private GitHub token provided; skipping ~/.netrc configuration."
+            exit 0
+          fi
+
+          printf 'machine github.com\nlogin x-access-token\npassword %s\n' "$PRIVATE_GITHUB_TOKEN" > ~/.netrc
+          chmod 600 ~/.netrc
+
+      - name: Set up Python and install dependencies
+        env:
+          PRIVATE_GITHUB_TOKEN: ${{ secrets.PRIVATE_GITHUB_TOKEN }}
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.PRIVATE_GITHUB_TOKEN }}
+          VBASE_REPO_READ_TOKEN: ${{ secrets.PRIVATE_GITHUB_TOKEN }}
+        uses: validityBase/vbase-github-actions/.github/actions/setup-python-deps@v1
+        with:
+          requirements-files: ${{ inputs.requirements-files }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Run pylint
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+        run: ${{ inputs.pylint-command }}
+

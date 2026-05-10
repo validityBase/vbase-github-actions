@@ -3,10 +3,10 @@
 Reusable workflows live under `.github/workflows/` and should be preferred for
 full CI/CD processes.
 
-Planned reusable workflow candidates:
-- `publish-docs.yml`
+Reusable workflow roadmap:
+- `publish-docs.yml` (implemented)
+- `python-lint.yml` (implemented)
 - `python-ci.yml`
-- `python-lint.yml`
 - `e2e-tests.yml`
 - `coverage.yml`
 - `deploy-ecs-service.yml`
@@ -31,6 +31,28 @@ jobs:
 
 Reusable workflows must avoid printing secrets, generated `.env` files, or
 private configuration payloads.
+
+## python-lint.yml
+
+`python-lint.yml` standardizes the common Python pylint workflow:
+
+- checkout caller repository;
+- optionally configure `~/.netrc` for private GitHub dependencies;
+- set up Python and install caller requirements through
+  `.github/actions/setup-python-deps`;
+- run the caller-provided pylint command.
+
+The workflow accepts an optional `PRIVATE_GITHUB_TOKEN` secret. When supplied,
+the token is written only to `~/.netrc` and is also exposed as
+`VBASE_COMMON_REPO_READ_TOKEN` and `VBASE_REPO_READ_TOKEN` for requirements
+files that already use those environment variables.
+
+Important inputs:
+- `requirements-files` is required and supports one or more newline-separated
+  requirements files.
+- `python-version` defaults to `3.11`.
+- `pylint-command` defaults to `pylint $(git ls-files '*.py')`.
+- `working-directory` defaults to the repository root.
 
 ## publish-docs.yml
 
