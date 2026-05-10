@@ -15,6 +15,8 @@ Actions and reusable workflows.
   secret values.
 - Downstream repositories should consume reviewed release refs such as `@v1` or
   full commit SHAs, based on policy.
+- Internal specs and memory live under `internal/`; root `CLAUDE.md` and
+  `AGENTS.md` stay small and point here.
 
 ## Current Shared Actions
 
