@@ -28,6 +28,25 @@ with:
   python-version: "3.11"
 ```
 
+Hashed lock files can opt in to pip hash-checking mode:
+
+```yaml
+- name: Set up Python and install hashed dependencies
+  uses: validityBase/vbase-github-actions/.github/actions/setup-python-deps@v1
+  with:
+    requirements-files: |
+      requirements.txt
+    python-version: "3.11"
+    require-hashes: true
+```
+
+`require-hashes` defaults to `false` so existing repositories continue to work.
+When it is `true`, each listed requirements file is installed with
+`python -m pip install --require-hashes -r <file>`. Prefer passing one generated
+lock file per job, for example `requirements-dev.txt`; if multiple files are
+listed, each file must be independently installable in hash-checking mode.
+See `internal/specs/python-dependency-hashes.md` for the migration pattern.
+
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
@@ -150,6 +169,16 @@ Pass `PRIVATE_GITHUB_TOKEN` when requirements install private GitHub
 dependencies. The workflow configures `~/.netrc` and also exposes the token as
 `VBASE_COMMON_REPO_READ_TOKEN` and `VBASE_REPO_READ_TOKEN` for existing
 requirements files that use environment substitution.
+`require-hashes` defaults to `false`; set it to `true` after the caller
+repository has migrated the selected requirements file to a generated hashed
+lock file:
+
+```yaml
+with:
+  requirements-files: |
+    requirements-dev.txt
+  require-hashes: true
+```
 
 ### publish-docs
 
@@ -181,3 +210,4 @@ also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
+For migrated docs lock files, pass `require-hashes: true`.
