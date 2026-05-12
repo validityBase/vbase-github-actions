@@ -98,4 +98,6 @@ Optional inputs:
 
 The action is a Node 24 action and runs the checked-in bundled `index.js`.
 Source TypeScript and package files are kept with the action for maintenance,
-but `node_modules` must not be committed.
+but `node_modules` must not be committed. Runtime dependencies should pass
+`npm audit --omit=dev`; after changing TypeScript source or package
+dependencies, rebuild and commit the bundled `index.js`.
