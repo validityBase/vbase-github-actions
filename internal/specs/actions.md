@@ -20,10 +20,10 @@ caching to `actions/setup-python` with `cache: pip` and `cache-dependency-path`.
 
 `require-hashes` is deliberately opt-in so existing repositories that still use
 ordinary requirements files continue to work on the `@v1` release line. Migrated
-repositories should pass a generated lock file produced by `pip-compile
---generate-hashes`. Prefer one installable lock file per job, such as
-`requirements-dev.txt`; if multiple files are listed, each file must satisfy
-pip hash-checking mode on its own.
+repositories should pass a generated lock file produced by `pip-compile --generate-hashes`.
+Prefer one installable lock file per job, such as `requirements-dev.txt`; if
+multiple files are listed, each file must satisfy pip hash-checking mode on its
+own.
 
 ## setup-node-deps
 
