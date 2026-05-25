@@ -74,6 +74,7 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
       env:
+        GITHUB_TOKEN: ${{ github.token }}
         PRODUCT_REPO: ${{ inputs.product-repo }}
         PRODUCT_REPO_PAT: ${{ inputs.product-repo-pat }}
       run: python -m scripts.main --credential-check
@@ -82,6 +83,7 @@ runs:
       shell: bash
       working-directory: ${{ github.action_path }}
       env:
+        GITHUB_TOKEN: ${{ github.token }}
         PRODUCT_REPO: ${{ inputs.product-repo }}
         PRODUCT_REPO_PAT: ${{ inputs.product-repo-pat }}
         OPENAI_API_KEY: ${{ inputs.openai-api-key }}
