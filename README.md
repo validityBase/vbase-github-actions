@@ -114,6 +114,53 @@ docs repository should always publish to `main`, pass
 `target-repository-branch: main`; otherwise the action defaults to the current
 product branch name.
 
+### validate-docs-against-product-sources
+
+Monitors commits to a product repository and reports which documentation files
+in the calling repo have become inaccurate, using an OpenAI LLM for analysis.
+The calling workflow must check out the docs repo before invoking this action so
+that `doc-map.json` and the doc files are accessible.
+
+```yaml
+- name: Validate docs against product sources
+  uses: validityBase/vbase-github-actions/validate-docs-against-product-sources@v1
+  with:
+    mode: from_last_run
+    product-repo: acme/my-library
+    product-repo-pat: ${{ secrets.PRODUCT_REPO_PAT }}
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+```
+
+`mode` controls the commit window to analyse. Supported values: `fresh_check`,
+`from_last_run`, `last_1_week`, `last_1_month`, `last_2_months`,
+`last_3_months`, `last_5_months`, `last_6_months`, `last_1_year`,
+`last_2_years`. `from_last_run` (the default) uses the last successful run of
+the calling workflow as the cursor — pass the calling workflow's filename
+through `workflow-filename` (default `doc-sync.yml`).
+
+`openai-model` defaults to `gpt-4o`. `python-version` defaults to `3.11`.
+
+`doc-map-path` (default `doc-map.json`) points to a JSON file in the calling
+repo that maps repo-relative doc and sample paths to the product API symbols
+they cover. This file grounds the LLM analysis.
+
+`exclude-files` is a comma-separated list of repo-relative files the LLM must
+not suggest changes to (default `README.md,CONTRIBUTING.md`). Extend it for
+auto-generated or non-content files:
+
+```yaml
+with:
+  mode: from_last_run
+  product-repo: acme/my-library
+  product-repo-pat: ${{ secrets.PRODUCT_REPO_PAT }}
+  openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+  exclude-files: "README.md,CONTRIBUTING.md,docs/conf.py,docs/index.rst"
+  workflow-filename: doc-sync.yml
+```
+
+`product-repo-pat` is optional for public repositories; the action falls back
+to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
+
 ## Release Policy
 
 Downstream repositories should reference this repository through reviewed
