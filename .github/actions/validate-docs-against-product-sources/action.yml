@@ -1,0 +1,95 @@
+name: Validate Docs Against Product Sources
+description: >
+  Analyses commits to a product repo and reports which documentation files
+  in the calling repo have become inaccurate, using an LLM for analysis.
+  Requires the calling workflow to check out the docs repo first.
+
+inputs:
+  mode:
+    description: >
+      Analysis scope: fresh_check | from_last_run | last_1_week | last_1_month |
+      last_2_months | last_3_months | last_5_months | last_6_months |
+      last_1_year | last_2_years
+    required: true
+    default: from_last_run
+
+  product-repo:
+    description: "owner/repo of the product repository to monitor (e.g. acme/my-library)"
+    required: true
+
+  product-repo-pat:
+    description: >
+      PAT for product repo access. Optional for public repos — falls back to
+      GITHUB_TOKEN (authenticated, higher rate limits than anonymous).
+    required: false
+    default: ""
+
+  openai-api-key:
+    description: "OpenAI API key (required)"
+    required: false
+    default: ""
+
+  openai-model:
+    description: "OpenAI model name"
+    required: false
+    default: gpt-4o
+
+  doc-map-path:
+    description: >
+      Repo-relative path to the doc-map JSON file in the calling repo.
+      The file must map repo-relative doc/sample paths to the product API symbols
+      they cover (used to ground the LLM analysis).
+    required: false
+    default: doc-map.json
+
+  exclude-files:
+    description: >
+      Comma-separated list of repo-relative files the LLM must not suggest
+      changes to (e.g. README.md,CONTRIBUTING.md,docs/conf.py).
+    required: false
+    default: "README.md,CONTRIBUTING.md"
+
+  workflow-filename:
+    description: >
+      Filename of the calling workflow. Used by from_last_run mode to query the
+      last successful run of this workflow as a commit-window cursor.
+    required: false
+    default: doc-sync.yml
+
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.11"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      # actions/setup-python v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Validate credentials
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        PRODUCT_REPO: ${{ inputs.product-repo }}
+        PRODUCT_REPO_PAT: ${{ inputs.product-repo-pat }}
+      run: python -m scripts.main --credential-check
+
+    - name: Analyse docs
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        PRODUCT_REPO: ${{ inputs.product-repo }}
+        PRODUCT_REPO_PAT: ${{ inputs.product-repo-pat }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        OPENAI_MODEL: ${{ inputs.openai-model }}
+        DOC_MAP_RELATIVE_PATH: ${{ inputs.doc-map-path }}
+        EXCLUDE_FILES: ${{ inputs.exclude-files }}
+        WORKFLOW_FILENAME: ${{ inputs.workflow-filename }}
+        MODE: ${{ inputs.mode }}
+      run: python -m scripts.main --mode "$MODE"
