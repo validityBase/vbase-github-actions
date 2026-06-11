@@ -128,6 +128,7 @@ The action uploads the bundle, checksum, and metadata to:
 
 The implementation intentionally uses the Backblaze B2 Native API through the
 Python standard library. It avoids runtime dependency installation and avoids a
-third-party upload action in the production backup path. Secrets must be passed
-by the caller and must not be logged. The action does not back up Git LFS
+third-party upload action in the production backup path. B2 credential values
+must be resolved by the caller's approved secret-management process, passed as
+action inputs at runtime, and never logged. The action does not back up Git LFS
 objects or submodule repositories.

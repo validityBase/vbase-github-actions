@@ -177,10 +177,14 @@ checkout or orchestration itself.
   with:
     backup-prefix: github-backups
     bundle-name: repo.bundle
-    b2-key-id: ${{ secrets.B2_KEY_ID }}
-    b2-application-key: ${{ secrets.B2_APPLICATION_KEY }}
-    b2-bucket-name: ${{ secrets.B2_BUCKET_NAME }}
+    b2-key-id: ${{ env.B2_KEY_ID }}
+    b2-application-key: ${{ env.B2_APPLICATION_KEY }}
+    b2-bucket-name: ${{ env.B2_BUCKET_NAME }}
 ```
+
+The action is secret-source agnostic. Resolve the B2 credential values from the
+caller repository's approved secret-management process before this step, then
+pass them as the `b2-*` inputs.
 
 The action uploads:
 - `repo.bundle`
@@ -205,8 +209,8 @@ security policy.
 Breaking changes require a new major release ref such as `@v2`.
 
 This repository is public. Do not commit secret values, webhook URLs, private
-tokens, or repository-specific private configuration. Secrets must be supplied by
-caller workflows.
+tokens, or repository-specific private configuration. Sensitive values must be
+resolved by caller workflows at runtime.
 
 ## Reusable Workflows
 
@@ -288,9 +292,9 @@ jobs:
       backup-prefix: github-backups
       bundle-name: repo.bundle
     secrets:
-      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
-      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-      B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+      B2_KEY_ID: ${{ secrets.BACKUP_B2_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.BACKUP_B2_APPLICATION_KEY }}
+      B2_BUCKET_NAME: ${{ secrets.BACKUP_B2_BUCKET_NAME }}
 ```
 
 The reusable workflow checks out the caller repository with full history, then
@@ -299,3 +303,8 @@ matching `repo-backup-b2` composite action is used. It backs up Git history via
 `git bundle`; Git LFS objects and submodule repositories need separate backup
 coverage if a production repository uses them. Bucket lifecycle rules and
 quarterly restore-test scheduling are managed outside this workflow.
+
+`B2_KEY_ID`, `B2_APPLICATION_KEY`, and `B2_BUCKET_NAME` are the runtime contract
+for this reusable workflow. They can be sourced from any approved
+secret-management system; the caller workflow is responsible for resolving those
+values and mapping them into the workflow call.

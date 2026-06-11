@@ -18,7 +18,7 @@ Actions and reusable workflows.
   full commit SHAs, based on policy.
 - Repository backup logic lives in `.github/actions/repo-backup-b2`; the public
   reusable workflow is `.github/workflows/repo-backup-b2.yml`. Caller repos own
-  schedules and B2 secrets.
+  schedules and B2 credential sourcing.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
   `AGENTS.md` stay small and point here.
 

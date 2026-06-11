@@ -107,7 +107,7 @@ This keeps the reusable workflow as the public entry point and keeps backup
 logic in the composite action implementation. It also lets branch/SHA-based
 callers test workflow changes before a release tag is moved.
 
-Required secrets:
+Required runtime secrets:
 - `B2_KEY_ID`
 - `B2_APPLICATION_KEY`
 - `B2_BUCKET_NAME`
@@ -119,6 +119,8 @@ Important inputs:
 
 The workflow expects the caller repository to own scheduling, for example daily
 cron plus `workflow_dispatch`. It produces a full-history git bundle, checksum,
-and metadata object under a timestamped B2 prefix. Bucket lifecycle rules,
-credential provisioning, and quarterly restore tests are separate operational
-tasks outside this reusable workflow.
+and metadata object under a timestamped B2 prefix. The workflow is
+secret-source agnostic: callers must resolve B2 credentials through their
+approved secret-management process and map the values into the workflow call.
+Bucket lifecycle rules, credential provisioning, and quarterly restore tests are
+separate operational tasks outside this reusable workflow.
