@@ -6,6 +6,7 @@ full CI/CD processes.
 Reusable workflow roadmap:
 - `publish-docs.yml` (implemented)
 - `python-lint.yml` (implemented)
+- `repo-backup-b2.yml` (implemented)
 - `python-ci.yml`
 - `e2e-tests.yml`
 - `coverage.yml`
@@ -91,3 +92,33 @@ Known local workflow variants:
 - C# docs require MSBuild plus a repository-local markdown patch script;
 - `vbase-django-tools` generates OpenAPI markdown on Windows before publishing;
 - some sample repositories publish existing `docs/` without a build step.
+
+## repo-backup-b2.yml
+
+`repo-backup-b2.yml` standardizes production repository backups to Backblaze B2:
+
+- checkout the caller repository with full history;
+- resolve the shared-actions ref from `github.workflow_ref`;
+- checkout `validityBase/vbase-github-actions` at that ref into
+  `.vbase-github-actions`;
+- run `.github/actions/repo-backup-b2`.
+
+This keeps the reusable workflow as the public entry point and keeps backup
+logic in the composite action implementation. It also lets branch/SHA-based
+callers test workflow changes before a release tag is moved.
+
+Required secrets:
+- `B2_KEY_ID`
+- `B2_APPLICATION_KEY`
+- `B2_BUCKET_NAME`
+
+Important inputs:
+- `backup-prefix` defaults to `github-backups`.
+- `bundle-name` defaults to `repo.bundle`.
+- `runner` defaults to `ubuntu-latest`.
+
+The workflow expects the caller repository to own scheduling, for example daily
+cron plus `workflow_dispatch`. It produces a full-history git bundle, checksum,
+and metadata object under a timestamped B2 prefix. Bucket lifecycle rules,
+credential provisioning, and quarterly restore tests are separate operational
+tasks outside this reusable workflow.

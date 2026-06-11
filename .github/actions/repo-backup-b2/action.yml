@@ -1,0 +1,57 @@
+name: Repo Backup to Backblaze B2
+description: >
+  Creates a full-history git bundle for the checked-out caller repository,
+  verifies it, writes checksum and metadata files, and uploads all backup
+  artifacts to a Backblaze B2 bucket.
+
+inputs:
+  backup-prefix:
+    description: B2 object prefix for backups.
+    required: false
+    default: github-backups
+
+  bundle-name:
+    description: Backup bundle file name.
+    required: false
+    default: repo.bundle
+
+  b2-key-id:
+    description: Backblaze B2 application key ID.
+    required: true
+
+  b2-application-key:
+    description: Backblaze B2 application key secret.
+    required: true
+
+  b2-bucket-name:
+    description: Backblaze B2 bucket name.
+    required: true
+
+outputs:
+  remote-prefix:
+    description: B2 prefix where backup artifacts were uploaded.
+    value: ${{ steps.backup.outputs.remote-prefix }}
+  bundle-path:
+    description: Local path to the generated git bundle.
+    value: ${{ steps.backup.outputs.bundle-path }}
+  sha256-path:
+    description: Local path to the generated SHA-256 checksum file.
+    value: ${{ steps.backup.outputs.sha256-path }}
+  metadata-path:
+    description: Local path to the generated metadata file.
+    value: ${{ steps.backup.outputs.metadata-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create and upload repo backup
+      id: backup
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        BACKUP_PREFIX: ${{ inputs.backup-prefix }}
+        BUNDLE_NAME: ${{ inputs.bundle-name }}
+        B2_KEY_ID: ${{ inputs.b2-key-id }}
+        B2_APPLICATION_KEY: ${{ inputs.b2-application-key }}
+        B2_BUCKET_NAME: ${{ inputs.b2-bucket-name }}
+      run: python3 -m scripts.main

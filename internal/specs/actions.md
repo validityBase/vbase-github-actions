@@ -101,3 +101,33 @@ Source TypeScript and package files are kept with the action for maintenance,
 but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
 dependencies, rebuild and commit the bundled `index.js`.
+
+## repo-backup-b2
+
+Creates and uploads restore-friendly repository backups to Backblaze B2.
+
+Required inputs:
+- `b2-key-id`
+- `b2-application-key`
+- `b2-bucket-name`
+
+Optional inputs:
+- `backup-prefix`: defaults to `github-backups`.
+- `bundle-name`: defaults to `repo.bundle`.
+
+The caller repository must already be checked out before this action runs. The
+action fetches all branch and tag refs, creates a full-history `git bundle`,
+verifies the bundle, writes `repo.bundle.sha256`, writes `metadata.json`, and
+smoke-tests restore with `git clone <bundle>` followed by `git fsck --strict`.
+
+The action uploads the bundle, checksum, and metadata to:
+
+```text
+<backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
+```
+
+The implementation intentionally uses the Backblaze B2 Native API through the
+Python standard library. It avoids runtime dependency installation and avoids a
+third-party upload action in the production backup path. Secrets must be passed
+by the caller and must not be logged. The action does not back up Git LFS
+objects or submodule repositories.

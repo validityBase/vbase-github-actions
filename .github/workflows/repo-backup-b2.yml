@@ -1,0 +1,70 @@
+name: Repo Backup to Backblaze B2
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub runner label.
+        required: false
+        type: string
+        default: ubuntu-latest
+      backup-prefix:
+        description: B2 object prefix for backups.
+        required: false
+        type: string
+        default: github-backups
+      bundle-name:
+        description: Backup bundle file name.
+        required: false
+        type: string
+        default: repo.bundle
+    secrets:
+      B2_KEY_ID:
+        description: Backblaze B2 application key ID.
+        required: true
+      B2_APPLICATION_KEY:
+        description: Backblaze B2 application key secret.
+        required: true
+      B2_BUCKET_NAME:
+        description: Backblaze B2 bucket name.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  repo-backup:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve shared actions ref
+        id: shared-actions
+        shell: bash
+        env:
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+
+          echo "ref=${WORKFLOW_REF#*@}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout shared action source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+        with:
+          repository: validityBase/vbase-github-actions
+          ref: ${{ steps.shared-actions.outputs.ref }}
+          path: .vbase-github-actions
+
+      - name: Create and upload backup
+        uses: ./.vbase-github-actions/.github/actions/repo-backup-b2
+        with:
+          backup-prefix: ${{ inputs.backup-prefix }}
+          bundle-name: ${{ inputs.bundle-name }}
+          b2-key-id: ${{ secrets.B2_KEY_ID }}
+          b2-application-key: ${{ secrets.B2_APPLICATION_KEY }}
+          b2-bucket-name: ${{ secrets.B2_BUCKET_NAME }}

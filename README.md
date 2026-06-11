@@ -161,6 +161,41 @@ with:
 `product-repo-pat` is optional for public repositories; the action falls back
 to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
+### repo-backup-b2
+
+Creates a full-history git bundle for the checked-out caller repository,
+verifies the bundle, writes checksum and metadata files, smoke-tests restore,
+and uploads all backup artifacts to a private Backblaze B2 bucket.
+
+Prefer the reusable `repo-backup-b2.yml` workflow for production repository
+backups. Use this direct action only when the caller workflow needs to own
+checkout or orchestration itself.
+
+```yaml
+- name: Create and upload repo backup
+  uses: validityBase/vbase-github-actions/.github/actions/repo-backup-b2@v1
+  with:
+    backup-prefix: github-backups
+    bundle-name: repo.bundle
+    b2-key-id: ${{ secrets.B2_KEY_ID }}
+    b2-application-key: ${{ secrets.B2_APPLICATION_KEY }}
+    b2-bucket-name: ${{ secrets.B2_BUCKET_NAME }}
+```
+
+The action uploads:
+- `repo.bundle`
+- `repo.bundle.sha256`
+- `metadata.json`
+
+Objects are written under:
+
+```text
+<backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
+```
+
+The action uses the Backblaze B2 Native API directly and does not install
+`boto3`, `b2sdk`, or third-party upload actions.
+
 ## Release Policy
 
 Downstream repositories should reference this repository through reviewed
@@ -228,3 +263,39 @@ also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
+
+### repo-backup-b2
+
+Reusable workflow for daily or manual production repository backups to
+Backblaze B2. The schedule lives in the caller repository; this workflow holds
+the shared backup implementation.
+
+```yaml
+name: Daily repo backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup-b2.yml@v1
+    with:
+      backup-prefix: github-backups
+      bundle-name: repo.bundle
+    secrets:
+      B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
+```
+
+The reusable workflow checks out the caller repository with full history, then
+checks out this repository at the same ref as the reusable workflow so the
+matching `repo-backup-b2` composite action is used. It backs up Git history via
+`git bundle`; Git LFS objects and submodule repositories need separate backup
+coverage if a production repository uses them. Bucket lifecycle rules and
+quarterly restore-test scheduling are managed outside this workflow.
