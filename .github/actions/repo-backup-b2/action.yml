@@ -54,4 +54,4 @@ runs:
         B2_KEY_ID: ${{ inputs.b2-key-id }}
         B2_APPLICATION_KEY: ${{ inputs.b2-application-key }}
         B2_BUCKET_NAME: ${{ inputs.b2-bucket-name }}
-      run: python3 -m scripts.main
+      run: python -m scripts.main

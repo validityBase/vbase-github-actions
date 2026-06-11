@@ -84,7 +84,13 @@ class B2Client:
     def _resolve_bucket_id(self, storage_api: dict[str, Any]) -> str:
         for bucket in storage_api.get("allowed", {}).get("buckets", []):
             if bucket.get("name") == self.bucket_name:
-                return bucket["id"]
+                bucket_id = bucket.get("id") or bucket.get("bucketId")
+                if bucket_id:
+                    return bucket_id
+                raise ValueError(
+                    f"B2 authorize response did not include an id for bucket: "
+                    f"{self.bucket_name}"
+                )
 
         buckets = self._request_json(
             f"{self.api_url}/b2api/{B2_API_VERSION}/b2_list_buckets",

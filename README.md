@@ -173,7 +173,7 @@ checkout or orchestration itself.
 
 ```yaml
 - name: Create and upload repo backup
-  uses: validityBase/vbase-github-actions/.github/actions/repo-backup-b2@v1
+  uses: validityBase/vbase-github-actions/.github/actions/repo-backup-b2@<reviewed-ref>
   with:
     backup-prefix: github-backups
     bundle-name: repo.bundle
@@ -185,6 +185,9 @@ checkout or orchestration itself.
 The action is secret-source agnostic. Resolve the B2 credential values from the
 caller repository's approved secret-management process before this step, then
 pass them as the `b2-*` inputs.
+
+Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
+`repo-backup-b2`.
 
 The action uploads:
 - `repo.bundle`
@@ -287,24 +290,29 @@ permissions:
 
 jobs:
   backup:
-    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup-b2.yml@v1
+    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup-b2.yml@<reviewed-ref>
     with:
       backup-prefix: github-backups
       bundle-name: repo.bundle
+      bitwarden-project: vbase-backblaze-b2-backups
     secrets:
-      B2_KEY_ID: ${{ secrets.BACKUP_B2_KEY_ID }}
-      B2_APPLICATION_KEY: ${{ secrets.BACKUP_B2_APPLICATION_KEY }}
-      B2_BUCKET_NAME: ${{ secrets.BACKUP_B2_BUCKET_NAME }}
+      VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+      BWS_ACCESS_TOKEN: ${{ secrets.VBASE_BACKBLAZE_B2_BACKUPS_TOKEN }}
 ```
 
 The reusable workflow checks out the caller repository with full history, then
 checks out this repository at the same ref as the reusable workflow so the
-matching `repo-backup-b2` composite action is used. It backs up Git history via
-`git bundle`; Git LFS objects and submodule repositories need separate backup
-coverage if a production repository uses them. Bucket lifecycle rules and
-quarterly restore-test scheduling are managed outside this workflow.
+matching backup implementation is used. It installs `vbase-common`, resolves
+`B2_KEY_ID`, `B2_APPLICATION_KEY`, and `B2_BUCKET_NAME` from the configured
+Bitwarden project, and backs up Git history via `git bundle`; Git LFS objects
+and submodule repositories need separate backup coverage if a production
+repository uses them. Bucket lifecycle rules and quarterly restore-test
+scheduling are managed outside this workflow.
 
-`B2_KEY_ID`, `B2_APPLICATION_KEY`, and `B2_BUCKET_NAME` are the runtime contract
-for this reusable workflow. They can be sourced from any approved
-secret-management system; the caller workflow is responsible for resolving those
-values and mapping them into the workflow call.
+`VBASE_COMMON_REPO_READ_TOKEN` is used only to install `vbase-common`.
+`BWS_ACCESS_TOKEN` is the Bitwarden machine access token for the backup project.
+The Bitwarden project must contain `B2_KEY_ID`, `B2_APPLICATION_KEY`, and
+`B2_BUCKET_NAME`.
+
+Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
+`repo-backup-b2`.

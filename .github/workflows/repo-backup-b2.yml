@@ -8,6 +8,26 @@ on:
         required: false
         type: string
         default: ubuntu-latest
+      python-version:
+        description: Python version used for Bitwarden and backup helpers.
+        required: false
+        type: string
+        default: "3.12"
+      vbase-common-ref:
+        description: Git ref of validityBase/vbase-common to install for Bitwarden helpers.
+        required: false
+        type: string
+        default: v0.1.1
+      bitwarden-project:
+        description: Bitwarden project containing B2_KEY_ID, B2_APPLICATION_KEY, and B2_BUCKET_NAME.
+        required: false
+        type: string
+        default: vbase-backblaze-b2-backups
+      bitwarden-org-id:
+        description: Bitwarden organization id for the backup secrets project.
+        required: false
+        type: string
+        default: f8c92883-7bb9-4d29-a2d4-b137014f77af
       backup-prefix:
         description: B2 object prefix for backups.
         required: false
@@ -19,14 +39,11 @@ on:
         type: string
         default: repo.bundle
     secrets:
-      B2_KEY_ID:
-        description: Backblaze B2 application key ID.
+      VBASE_COMMON_REPO_READ_TOKEN:
+        description: Token used to install validityBase/vbase-common.
         required: true
-      B2_APPLICATION_KEY:
-        description: Backblaze B2 application key secret.
-        required: true
-      B2_BUCKET_NAME:
-        description: Backblaze B2 bucket name.
+      BWS_ACCESS_TOKEN:
+        description: Bitwarden machine access token scoped to the backup project.
         required: true
 
 permissions:
@@ -60,11 +77,45 @@ jobs:
           ref: ${{ steps.shared-actions.outputs.ref }}
           path: .vbase-github-actions
 
-      - name: Create and upload backup
-        uses: ./.vbase-github-actions/.github/actions/repo-backup-b2
+      - name: Set up Python for backup helpers
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # actions/setup-python v6.2.0
         with:
-          backup-prefix: ${{ inputs.backup-prefix }}
-          bundle-name: ${{ inputs.bundle-name }}
-          b2-key-id: ${{ secrets.B2_KEY_ID }}
-          b2-application-key: ${{ secrets.B2_APPLICATION_KEY }}
-          b2-bucket-name: ${{ secrets.B2_BUCKET_NAME }}
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Bitwarden helper dependencies
+        shell: bash
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+          VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$VBASE_COMMON_REPO_READ_TOKEN" ]; then
+            echo "VBASE_COMMON_REPO_READ_TOKEN is required." >&2
+            exit 1
+          fi
+
+          trap 'rm -f "$HOME/.netrc"' EXIT
+          printf 'machine github.com\nlogin x-access-token\npassword %s\n' "$VBASE_COMMON_REPO_READ_TOKEN" > "$HOME/.netrc"
+          chmod 600 "$HOME/.netrc"
+
+          python -m pip install --upgrade pip
+          python -m pip install --quiet \
+            "bitwarden-sdk>=2.0.0" \
+            "git+https://github.com/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
+
+      - name: Resolve B2 credentials from Bitwarden
+        shell: bash
+        env:
+          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
+          BW_PROJECT: ${{ inputs.bitwarden-project }}
+          BW_ORG_ID: ${{ inputs.bitwarden-org-id }}
+        run: python .vbase-github-actions/.github/actions/repo-backup-b2/scripts/bitwarden_env.py
+
+      - name: Create and upload backup
+        shell: bash
+        working-directory: .vbase-github-actions/.github/actions/repo-backup-b2
+        env:
+          BACKUP_PREFIX: ${{ inputs.backup-prefix }}
+          BUNDLE_NAME: ${{ inputs.bundle-name }}
+        run: python -m scripts.main

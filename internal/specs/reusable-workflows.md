@@ -101,26 +101,31 @@ Known local workflow variants:
 - resolve the shared-actions ref from `github.workflow_ref`;
 - checkout `validityBase/vbase-github-actions` at that ref into
   `.vbase-github-actions`;
-- run `.github/actions/repo-backup-b2`.
+- install `vbase-common` and the Bitwarden SDK;
+- resolve B2 credentials from the configured Bitwarden project;
+- run the shared backup implementation.
 
-This keeps the reusable workflow as the public entry point and keeps backup
-logic in the composite action implementation. It also lets branch/SHA-based
+This keeps the reusable workflow as the public entry point and keeps Git/B2
+backup logic in the shared action implementation. It also lets branch/SHA-based
 callers test workflow changes before a release tag is moved.
 
 Required runtime secrets:
-- `B2_KEY_ID`
-- `B2_APPLICATION_KEY`
-- `B2_BUCKET_NAME`
+- `VBASE_COMMON_REPO_READ_TOKEN`
+- `BWS_ACCESS_TOKEN`
 
 Important inputs:
 - `backup-prefix` defaults to `github-backups`.
 - `bundle-name` defaults to `repo.bundle`.
+- `bitwarden-project` defaults to `vbase-backblaze-b2-backups`.
+- `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
+- `vbase-common-ref` defaults to `v0.1.1`.
+- `python-version` defaults to `3.12`.
 - `runner` defaults to `ubuntu-latest`.
 
 The workflow expects the caller repository to own scheduling, for example daily
 cron plus `workflow_dispatch`. It produces a full-history git bundle, checksum,
-and metadata object under a timestamped B2 prefix. The workflow is
-secret-source agnostic: callers must resolve B2 credentials through their
-approved secret-management process and map the values into the workflow call.
-Bucket lifecycle rules, credential provisioning, and quarterly restore tests are
-separate operational tasks outside this reusable workflow.
+and metadata object under a timestamped B2 prefix. B2 credentials are read from
+the configured Bitwarden project and exposed only to later workflow steps through
+masked GitHub Actions environment values. Bucket lifecycle rules, credential
+provisioning, and quarterly restore tests are separate operational tasks outside
+this reusable workflow.

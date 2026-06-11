@@ -38,8 +38,9 @@ def build_artifacts(workspace: Path, backup_prefix: str, bundle_name: str) -> Ba
     output_dir = workspace / "out"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    date_path = datetime.now(timezone.utc).strftime("%Y/%m/%d")
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    now = datetime.now(timezone.utc)
+    date_path = now.strftime("%Y/%m/%d")
+    timestamp = now.strftime("%Y%m%dT%H%M%SZ")
     run_key = "-".join(
         [
             timestamp,
