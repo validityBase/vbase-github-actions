@@ -1,4 +1,4 @@
-"""Entrypoint for the repo-backup-b2 composite action."""
+"""Entrypoint for the repo-backup composite action."""
 
 from __future__ import annotations
 

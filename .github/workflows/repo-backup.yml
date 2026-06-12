@@ -1,4 +1,4 @@
-name: Repo Backup to Backblaze B2
+name: Repo Backup
 
 on:
   workflow_call:
@@ -29,7 +29,7 @@ on:
         type: string
         default: f8c92883-7bb9-4d29-a2d4-b137014f77af
       backup-prefix:
-        description: B2 object prefix for backups.
+        description: Object storage prefix for backups.
         required: false
         type: string
         default: github-backups
@@ -76,7 +76,7 @@ jobs:
         env:
           VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
           VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
-        run: python .vbase-github-actions/.github/actions/repo-backup-b2/scripts/install_bitwarden_deps.py
+        run: python .vbase-github-actions/.github/actions/repo-backup/scripts/install_bitwarden_deps.py
 
       - name: Resolve B2 credentials from Bitwarden
         shell: bash
@@ -84,11 +84,11 @@ jobs:
           BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
           BW_PROJECT: ${{ inputs.bitwarden-project }}
           BW_ORG_ID: ${{ inputs.bitwarden-org-id }}
-        run: python .vbase-github-actions/.github/actions/repo-backup-b2/scripts/bitwarden_env.py
+        run: python .vbase-github-actions/.github/actions/repo-backup/scripts/bitwarden_env.py
 
       - name: Create and upload backup
         shell: bash
-        working-directory: .vbase-github-actions/.github/actions/repo-backup-b2
+        working-directory: .vbase-github-actions/.github/actions/repo-backup
         env:
           BACKUP_PREFIX: ${{ inputs.backup-prefix }}
           BUNDLE_NAME: ${{ inputs.bundle-name }}

@@ -161,19 +161,20 @@ with:
 `product-repo-pat` is optional for public repositories; the action falls back
 to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
-### repo-backup-b2
+### repo-backup
 
 Creates a full-history git bundle for the checked-out caller repository,
 verifies the bundle, writes checksum and metadata files, smoke-tests restore,
-and uploads all backup artifacts to a private Backblaze B2 bucket.
+and uploads all backup artifacts to a private backup bucket through the current
+Backblaze B2 adapter.
 
-Prefer the reusable `repo-backup-b2.yml` workflow for production repository
+Prefer the reusable `repo-backup.yml` workflow for production repository
 backups. Use this direct action only when the caller workflow needs to own
 checkout or orchestration itself.
 
 ```yaml
 - name: Create and upload repo backup
-  uses: validityBase/vbase-github-actions/.github/actions/repo-backup-b2@<reviewed-ref>
+  uses: validityBase/vbase-github-actions/.github/actions/repo-backup@<reviewed-ref>
   with:
     backup-prefix: github-backups
     bundle-name: repo.bundle
@@ -187,7 +188,7 @@ caller repository's approved secret-management process before this step, then
 pass them as the `b2-*` inputs.
 
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
-`repo-backup-b2`.
+`repo-backup`.
 
 The action uploads:
 - `repo.bundle`
@@ -271,11 +272,12 @@ Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
 
-### repo-backup-b2
+### repo-backup
 
 Reusable workflow for daily or manual production repository backups to
-Backblaze B2. The schedule lives in the caller repository; this workflow holds
-the shared backup implementation.
+object storage. The current implementation uploads to Backblaze B2. The
+schedule lives in the caller repository; this workflow holds the shared backup
+implementation.
 
 ```yaml
 name: Daily repo backup
@@ -290,7 +292,7 @@ permissions:
 
 jobs:
   backup:
-    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup-b2.yml@<reviewed-ref>
+    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup.yml@<reviewed-ref>
     with:
       backup-prefix: github-backups
       bundle-name: repo.bundle
@@ -315,4 +317,4 @@ The Bitwarden project must contain `B2_KEY_ID`, `B2_APPLICATION_KEY`, and
 `B2_BUCKET_NAME`.
 
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
-`repo-backup-b2`.
+`repo-backup`.

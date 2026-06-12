@@ -16,8 +16,8 @@ Actions and reusable workflows.
   secret values.
 - Downstream repositories should consume reviewed release refs such as `@v1` or
   full commit SHAs, based on policy.
-- Repository backup logic lives in `.github/actions/repo-backup-b2`; the public
-  reusable workflow is `.github/workflows/repo-backup-b2.yml`. Caller repos own
+- Repository backup logic lives in `.github/actions/repo-backup`; the public
+  reusable workflow is `.github/workflows/repo-backup.yml`. Caller repos own
   schedules and pass the project-scoped Bitwarden token; the workflow resolves B2
   credentials at runtime.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
@@ -30,10 +30,10 @@ Actions and reusable workflows.
 - `.github/actions/setup-cypress-deps/action.yml`
 - `.github/actions/notifications/action.yml`
 - `.github/actions/publish-docs/action.yml`
-- `.github/actions/repo-backup-b2/action.yml`
+- `.github/actions/repo-backup/action.yml`
 
 ## Current Reusable Workflows
 
 - `.github/workflows/publish-docs.yml`
 - `.github/workflows/python-lint.yml`
-- `.github/workflows/repo-backup-b2.yml`
+- `.github/workflows/repo-backup.yml`

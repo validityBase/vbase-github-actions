@@ -102,9 +102,10 @@ but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
 dependencies, rebuild and commit the bundled `index.js`.
 
-## repo-backup-b2
+## repo-backup
 
-Creates and uploads restore-friendly repository backups to Backblaze B2.
+Creates and uploads restore-friendly repository backups to a backup bucket
+through the current Backblaze B2 adapter.
 
 Required inputs:
 - `b2-key-id`

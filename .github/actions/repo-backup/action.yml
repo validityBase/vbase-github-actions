@@ -1,12 +1,12 @@
-name: Repo Backup to Backblaze B2
+name: Repo Backup
 description: >
   Creates a full-history git bundle for the checked-out caller repository,
   verifies it, writes checksum and metadata files, and uploads all backup
-  artifacts to a Backblaze B2 bucket.
+  artifacts to a backup bucket through the current Backblaze B2 adapter.
 
 inputs:
   backup-prefix:
-    description: B2 object prefix for backups.
+    description: Object storage prefix for backups.
     required: false
     default: github-backups
 
@@ -29,7 +29,7 @@ inputs:
 
 outputs:
   remote-prefix:
-    description: B2 prefix where backup artifacts were uploaded.
+    description: Object storage prefix where backup artifacts were uploaded.
     value: ${{ steps.backup.outputs.remote-prefix }}
   bundle-path:
     description: Local path to the generated git bundle.

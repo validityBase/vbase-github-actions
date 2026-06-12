@@ -6,7 +6,7 @@ full CI/CD processes.
 Reusable workflow roadmap:
 - `publish-docs.yml` (implemented)
 - `python-lint.yml` (implemented)
-- `repo-backup-b2.yml` (implemented)
+- `repo-backup.yml` (implemented)
 - `python-ci.yml`
 - `e2e-tests.yml`
 - `coverage.yml`
@@ -93,21 +93,22 @@ Known local workflow variants:
 - `vbase-django-tools` generates OpenAPI markdown on Windows before publishing;
 - some sample repositories publish existing `docs/` without a build step.
 
-## repo-backup-b2.yml
+## repo-backup.yml
 
-`repo-backup-b2.yml` standardizes production repository backups to Backblaze B2:
+`repo-backup.yml` standardizes production repository backups to object storage.
+The current upload implementation targets Backblaze B2:
 
 - checkout the caller repository with full history;
-- resolve the shared-actions ref from `github.workflow_ref`;
-- checkout `validityBase/vbase-github-actions` at that ref into
+- checkout `validityBase/vbase-github-actions` at the reusable workflow ref into
   `.vbase-github-actions`;
 - install `vbase-common` and the Bitwarden SDK;
 - resolve B2 credentials from the configured Bitwarden project;
 - run the shared backup implementation.
 
-This keeps the reusable workflow as the public entry point and keeps Git/B2
-backup logic in the shared action implementation. It also lets branch/SHA-based
-callers test workflow changes before a release tag is moved.
+This keeps the reusable workflow as the public entry point and keeps Git backup
+logic plus the current B2 upload adapter in the shared action implementation.
+It also lets branch/SHA-based callers test workflow changes before a release
+tag is moved.
 
 Required runtime secrets:
 - `VBASE_COMMON_REPO_READ_TOKEN`
