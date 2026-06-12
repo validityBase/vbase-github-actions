@@ -82,7 +82,7 @@ class B2Client:
         return self._request_json(AUTH_URL, basic_auth=basic_auth)
 
     def _resolve_bucket_id(self, storage_api: dict[str, Any]) -> str:
-        for bucket in storage_api.get("allowed", {}).get("buckets", []):
+        for bucket in storage_api.get("allowed", {}).get("buckets") or []:
             if bucket.get("name") == self.bucket_name:
                 bucket_id = bucket.get("id") or bucket.get("bucketId")
                 if bucket_id:
