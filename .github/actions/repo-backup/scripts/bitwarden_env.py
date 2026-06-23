@@ -1,4 +1,4 @@
-"""Resolve Backblaze B2 backup credentials from Bitwarden Secrets Manager."""
+"""Resolve object storage backup credentials from Bitwarden Secrets Manager."""
 
 from __future__ import annotations
 
@@ -10,7 +10,13 @@ from pathlib import Path
 from bw_sm.core import BitwardenSecretManager
 
 
-REQUIRED_SECRET_NAMES = ("B2_KEY_ID", "B2_APPLICATION_KEY", "B2_BUCKET_NAME")
+REQUIRED_SECRET_NAMES = (
+    "OBJECT_STORAGE_ACCESS_KEY_ID",
+    "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+    "OBJECT_STORAGE_BUCKET_NAME",
+    "OBJECT_STORAGE_ENDPOINT_URL",
+    "OBJECT_STORAGE_REGION",
+)
 
 
 def require_env(name: str) -> str:
@@ -40,7 +46,7 @@ def append_github_env(name: str, value: str) -> None:
 
 
 def run() -> None:
-    """Fetch required B2 secrets and expose them to later workflow steps."""
+    """Fetch required object storage secrets for later workflow steps."""
     project_name = require_env("BW_PROJECT")
     organization_id = require_env("BW_ORG_ID")
     access_token = require_env("BWS_ACCESS_TOKEN")
@@ -64,7 +70,10 @@ def run() -> None:
         add_github_mask(value)
         append_github_env(name, value)
 
-    print(f"Resolved B2 backup credentials from Bitwarden project: {project.name}")
+    print(
+        "Resolved object storage backup credentials from Bitwarden project: "
+        f"{project.name}"
+    )
 
 
 def main() -> None:

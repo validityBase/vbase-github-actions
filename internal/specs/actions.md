@@ -105,12 +105,14 @@ dependencies, rebuild and commit the bundled `index.js`.
 ## repo-backup
 
 Creates and uploads restore-friendly repository backups to a backup bucket
-through the current Backblaze B2 adapter.
+through the S3-compatible object storage API.
 
 Required inputs:
-- `b2-key-id`
-- `b2-application-key`
-- `b2-bucket-name`
+- `object-storage-access-key-id`
+- `object-storage-secret-access-key`
+- `object-storage-bucket-name`
+- `object-storage-endpoint-url`
+- `object-storage-region`
 
 Optional inputs:
 - `backup-prefix`: defaults to `github-backups`.
@@ -127,9 +129,9 @@ The action uploads the bundle, checksum, and metadata to:
 <backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
 ```
 
-The implementation intentionally uses the Backblaze B2 Native API through the
-Python standard library. It avoids runtime dependency installation and avoids a
-third-party upload action in the production backup path. B2 credential values
-must be resolved by the caller's approved secret-management process, passed as
-action inputs at runtime, and never logged. The action does not back up Git LFS
-objects or submodule repositories.
+The implementation intentionally uses the S3-compatible API through the Python
+standard library. It avoids runtime dependency installation and avoids a
+third-party upload action in the production backup path. Object storage
+credential values must be resolved by the caller's approved secret-management
+process, passed as action inputs at runtime, and never logged. The action does
+not back up Git LFS objects or submodule repositories.

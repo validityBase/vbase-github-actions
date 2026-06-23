@@ -165,8 +165,8 @@ to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
 Creates a full-history git bundle for the checked-out caller repository,
 verifies the bundle, writes checksum and metadata files, smoke-tests restore,
-and uploads all backup artifacts to a private backup bucket through the current
-Backblaze B2 adapter.
+and uploads all backup artifacts to a private S3-compatible object storage
+bucket.
 
 Prefer the reusable `repo-backup.yml` workflow for production repository
 backups. Use this direct action only when the caller workflow needs to own
@@ -178,14 +178,16 @@ checkout or orchestration itself.
   with:
     backup-prefix: github-backups
     bundle-name: repo.bundle
-    b2-key-id: ${{ env.B2_KEY_ID }}
-    b2-application-key: ${{ env.B2_APPLICATION_KEY }}
-    b2-bucket-name: ${{ env.B2_BUCKET_NAME }}
+    object-storage-access-key-id: ${{ env.OBJECT_STORAGE_ACCESS_KEY_ID }}
+    object-storage-secret-access-key: ${{ env.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
+    object-storage-bucket-name: ${{ env.OBJECT_STORAGE_BUCKET_NAME }}
+    object-storage-endpoint-url: ${{ env.OBJECT_STORAGE_ENDPOINT_URL }}
+    object-storage-region: ${{ env.OBJECT_STORAGE_REGION }}
 ```
 
-The action is secret-source agnostic. Resolve the B2 credential values from the
-caller repository's approved secret-management process before this step, then
-pass them as the `b2-*` inputs.
+The action is secret-source agnostic. Resolve the object storage credential
+values from the caller repository's approved secret-management process before
+this step, then pass them as the `object-storage-*` inputs.
 
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
@@ -201,8 +203,8 @@ Objects are written under:
 <backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
 ```
 
-The action uses the Backblaze B2 Native API directly and does not install
-`boto3`, `b2sdk`, or third-party upload actions.
+The action uploads through the S3-compatible API and does not install `boto3`,
+cloud-provider SDKs, or third-party upload actions.
 
 ## Release Policy
 
@@ -275,9 +277,8 @@ and `cmd`.
 ### repo-backup
 
 Reusable workflow for daily or manual production repository backups to
-object storage. The current implementation uploads to Backblaze B2. The
-schedule lives in the caller repository; this workflow holds the shared backup
-implementation.
+S3-compatible object storage. The schedule lives in the caller repository; this
+workflow holds the shared backup implementation.
 
 ```yaml
 name: Daily repo backup
@@ -296,25 +297,25 @@ jobs:
     with:
       backup-prefix: github-backups
       bundle-name: repo.bundle
-      bitwarden-project: vbase-backblaze-b2-backups
+      bitwarden-project: vbase-repo-backups
     secrets:
       VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
-      BWS_ACCESS_TOKEN: ${{ secrets.VBASE_BACKBLAZE_B2_BACKUPS_TOKEN }}
+      BWS_ACCESS_TOKEN: ${{ secrets.VBASE_REPO_BACKUP_SECRETS_TOKEN }}
 ```
 
 The reusable workflow checks out the caller repository with full history, then
 checks out this repository at the same ref as the reusable workflow so the
 matching backup implementation is used. It installs `vbase-common`, resolves
-`B2_KEY_ID`, `B2_APPLICATION_KEY`, and `B2_BUCKET_NAME` from the configured
-Bitwarden project, and backs up Git history via `git bundle`; Git LFS objects
-and submodule repositories need separate backup coverage if a production
-repository uses them. Bucket lifecycle rules and quarterly restore-test
-scheduling are managed outside this workflow.
+the object storage credentials from the configured Bitwarden project, and backs
+up Git history via `git bundle`; Git LFS objects and submodule repositories need
+separate backup coverage if a production repository uses them. Bucket lifecycle
+rules and quarterly restore-test scheduling are managed outside this workflow.
 
 `VBASE_COMMON_REPO_READ_TOKEN` is used only to install `vbase-common`.
 `BWS_ACCESS_TOKEN` is the Bitwarden machine access token for the backup project.
-The Bitwarden project must contain `B2_KEY_ID`, `B2_APPLICATION_KEY`, and
-`B2_BUCKET_NAME`.
+The Bitwarden project must contain `OBJECT_STORAGE_ACCESS_KEY_ID`,
+`OBJECT_STORAGE_SECRET_ACCESS_KEY`, `OBJECT_STORAGE_BUCKET_NAME`,
+`OBJECT_STORAGE_ENDPOINT_URL`, and `OBJECT_STORAGE_REGION`.
 
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.

@@ -2,7 +2,7 @@ name: Repo Backup
 description: >
   Creates a full-history git bundle for the checked-out caller repository,
   verifies it, writes checksum and metadata files, and uploads all backup
-  artifacts to a backup bucket through the current Backblaze B2 adapter.
+  artifacts to an S3-compatible object storage bucket.
 
 inputs:
   backup-prefix:
@@ -15,16 +15,24 @@ inputs:
     required: false
     default: repo.bundle
 
-  b2-key-id:
-    description: Backblaze B2 application key ID.
+  object-storage-access-key-id:
+    description: Object storage access key ID.
     required: true
 
-  b2-application-key:
-    description: Backblaze B2 application key secret.
+  object-storage-secret-access-key:
+    description: Object storage secret access key.
     required: true
 
-  b2-bucket-name:
-    description: Backblaze B2 bucket name.
+  object-storage-bucket-name:
+    description: Object storage bucket name.
+    required: true
+
+  object-storage-endpoint-url:
+    description: S3-compatible object storage endpoint URL.
+    required: true
+
+  object-storage-region:
+    description: Object storage signing region.
     required: true
 
 outputs:
@@ -51,7 +59,9 @@ runs:
       env:
         BACKUP_PREFIX: ${{ inputs.backup-prefix }}
         BUNDLE_NAME: ${{ inputs.bundle-name }}
-        B2_KEY_ID: ${{ inputs.b2-key-id }}
-        B2_APPLICATION_KEY: ${{ inputs.b2-application-key }}
-        B2_BUCKET_NAME: ${{ inputs.b2-bucket-name }}
+        OBJECT_STORAGE_ACCESS_KEY_ID: ${{ inputs.object-storage-access-key-id }}
+        OBJECT_STORAGE_SECRET_ACCESS_KEY: ${{ inputs.object-storage-secret-access-key }}
+        OBJECT_STORAGE_BUCKET_NAME: ${{ inputs.object-storage-bucket-name }}
+        OBJECT_STORAGE_ENDPOINT_URL: ${{ inputs.object-storage-endpoint-url }}
+        OBJECT_STORAGE_REGION: ${{ inputs.object-storage-region }}
       run: python -m scripts.main

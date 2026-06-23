@@ -18,8 +18,8 @@ Actions and reusable workflows.
   full commit SHAs, based on policy.
 - Repository backup logic lives in `.github/actions/repo-backup`; the public
   reusable workflow is `.github/workflows/repo-backup.yml`. Caller repos own
-  schedules and pass the project-scoped Bitwarden token; the workflow resolves B2
-  credentials at runtime.
+  schedules and pass the project-scoped Bitwarden token; the workflow resolves
+  S3-compatible object storage credentials at runtime.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
   `AGENTS.md` stay small and point here.
 

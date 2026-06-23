@@ -95,20 +95,20 @@ Known local workflow variants:
 
 ## repo-backup.yml
 
-`repo-backup.yml` standardizes production repository backups to object storage.
-The current upload implementation targets Backblaze B2:
+`repo-backup.yml` standardizes production repository backups to S3-compatible
+object storage:
 
 - checkout the caller repository with full history;
 - checkout `validityBase/vbase-github-actions` at the reusable workflow ref into
   `.vbase-github-actions`;
 - install `vbase-common` and the Bitwarden SDK;
-- resolve B2 credentials from the configured Bitwarden project;
+- resolve object storage credentials from the configured Bitwarden project;
 - run the shared backup implementation.
 
 This keeps the reusable workflow as the public entry point and keeps Git backup
-logic plus the current B2 upload adapter in the shared action implementation.
-It also lets branch/SHA-based callers test workflow changes before a release
-tag is moved.
+logic plus the S3-compatible upload adapter in the shared action implementation.
+It also lets branch/SHA-based callers test workflow changes before a release tag
+is moved.
 
 Required runtime secrets:
 - `VBASE_COMMON_REPO_READ_TOKEN`
@@ -117,7 +117,7 @@ Required runtime secrets:
 Important inputs:
 - `backup-prefix` defaults to `github-backups`.
 - `bundle-name` defaults to `repo.bundle`.
-- `bitwarden-project` defaults to `vbase-backblaze-b2-backups`.
+- `bitwarden-project` defaults to `vbase-repo-backups`.
 - `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
 - `vbase-common-ref` defaults to `v0.1.1`.
 - `python-version` defaults to `3.12`.
@@ -125,8 +125,8 @@ Important inputs:
 
 The workflow expects the caller repository to own scheduling, for example daily
 cron plus `workflow_dispatch`. It produces a full-history git bundle, checksum,
-and metadata object under a timestamped B2 prefix. B2 credentials are read from
-the configured Bitwarden project and exposed only to later workflow steps through
-masked GitHub Actions environment values. Bucket lifecycle rules, credential
-provisioning, and quarterly restore tests are separate operational tasks outside
-this reusable workflow.
+and metadata object under a timestamped object storage prefix. Object storage
+credentials are read from the configured Bitwarden project and exposed only to
+later workflow steps through masked GitHub Actions environment values. Bucket
+lifecycle rules, credential provisioning, and quarterly restore tests are
+separate operational tasks outside this reusable workflow.

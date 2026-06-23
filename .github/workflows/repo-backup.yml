@@ -19,10 +19,10 @@ on:
         type: string
         default: v0.1.1
       bitwarden-project:
-        description: Bitwarden project containing B2_KEY_ID, B2_APPLICATION_KEY, and B2_BUCKET_NAME.
+        description: Bitwarden project containing object storage backup credentials.
         required: false
         type: string
-        default: vbase-backblaze-b2-backups
+        default: vbase-repo-backups
       bitwarden-org-id:
         description: Bitwarden organization id for the backup secrets project.
         required: false
@@ -78,7 +78,7 @@ jobs:
           VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
         run: python .vbase-github-actions/.github/actions/repo-backup/scripts/install_bitwarden_deps.py
 
-      - name: Resolve B2 credentials from Bitwarden
+      - name: Resolve object storage credentials from Bitwarden
         shell: bash
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}

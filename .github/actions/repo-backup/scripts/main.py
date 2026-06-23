@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from .b2_client import B2Client
 from .git_backup import (
     build_artifacts,
     create_and_verify_bundle,
@@ -16,6 +15,7 @@ from .git_backup import (
     write_github_outputs,
     write_metadata,
 )
+from .object_storage_client import ObjectStorageClient
 
 
 def run() -> None:
@@ -32,12 +32,14 @@ def run() -> None:
     write_metadata(workspace, artifacts, bundle_sha256)
     smoke_test_restore(workspace, artifacts.bundle_path)
 
-    b2 = B2Client(
-        key_id=require_env("B2_KEY_ID"),
-        application_key=require_env("B2_APPLICATION_KEY"),
-        bucket_name=require_env("B2_BUCKET_NAME"),
+    object_storage = ObjectStorageClient(
+        access_key_id=require_env("OBJECT_STORAGE_ACCESS_KEY_ID"),
+        secret_access_key=require_env("OBJECT_STORAGE_SECRET_ACCESS_KEY"),
+        bucket_name=require_env("OBJECT_STORAGE_BUCKET_NAME"),
+        endpoint_url=require_env("OBJECT_STORAGE_ENDPOINT_URL"),
+        region=require_env("OBJECT_STORAGE_REGION"),
     )
-    b2.upload_files(
+    object_storage.upload_files(
         [
             (
                 artifacts.bundle_path,
