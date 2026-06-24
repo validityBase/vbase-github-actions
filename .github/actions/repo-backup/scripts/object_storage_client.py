@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import http.client
-import sys
 import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -87,12 +86,10 @@ class ObjectStorageClient:
             response = connection.getresponse()
             response_body = response.read().decode("utf-8", errors="replace")
             if response.status not in {200, 201, 204}:
-                print(
-                    f"[ERROR] Object storage upload failed for {remote_name}: "
-                    f"HTTP {response.status}: {response_body}",
-                    file=sys.stderr,
+                raise RuntimeError(
+                    f"Object storage upload failed for {remote_name}: "
+                    f"HTTP {response.status}: {response_body}"
                 )
-                sys.exit(1)
         finally:
             connection.close()
 
