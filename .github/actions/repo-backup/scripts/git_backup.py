@@ -154,14 +154,20 @@ def run_git(*args: str, cwd: Path, log_output: bool = True) -> str:
 
 
 def run(*args: str, cwd: Path, log_output: bool = True) -> str:
-    completed = subprocess.run(
-        list(args),
-        cwd=cwd,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(
+            list(args),
+            cwd=cwd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        output = redact_credentials((exc.stdout or "").strip())
+        if output:
+            print(output)
+        raise
     output = redact_credentials(completed.stdout.strip())
     if output and log_output:
         print(output)

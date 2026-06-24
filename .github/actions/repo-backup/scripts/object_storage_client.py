@@ -41,6 +41,8 @@ class ObjectStorageClient:
             raise ValueError(
                 "OBJECT_STORAGE_ENDPOINT_URL must be an http(s) URL with a host."
             )
+        if endpoint.username or endpoint.password:
+            raise ValueError("OBJECT_STORAGE_ENDPOINT_URL must not include credentials.")
         if endpoint.path.rstrip("/"):
             raise ValueError("OBJECT_STORAGE_ENDPOINT_URL must not include a path.")
         if endpoint.query or endpoint.fragment:
