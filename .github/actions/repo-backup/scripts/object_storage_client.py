@@ -34,7 +34,12 @@ class ObjectStorageClient:
         for local_path, remote_name in uploads:
             self.upload_file(local_path, remote_name)
 
-    def upload_file(self, local_path: Path, remote_name: str) -> None:
+    def upload_file(
+        self,
+        local_path: Path,
+        remote_name: str,
+        payload_hash: str | None = None,
+    ) -> None:
         endpoint = urllib.parse.urlsplit(self.endpoint_url)
         if endpoint.scheme not in {"http", "https"} or not endpoint.netloc:
             raise ValueError(
@@ -52,7 +57,7 @@ class ObjectStorageClient:
         canonical_uri = self._canonical_uri(remote_name)
         target = self._request_target(endpoint, canonical_uri)
         size = local_path.stat().st_size
-        payload_hash = self._sha256_file(local_path)
+        payload_hash = payload_hash or self._sha256_file(local_path)
         request_time = datetime.now(timezone.utc)
         headers = self._signed_headers(
             host=endpoint.netloc,

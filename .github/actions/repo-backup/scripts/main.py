@@ -39,21 +39,18 @@ def run() -> None:
         endpoint_url=require_env("OBJECT_STORAGE_ENDPOINT_URL"),
         region=require_env("OBJECT_STORAGE_REGION"),
     )
-    object_storage.upload_files(
-        [
-            (
-                artifacts.bundle_path,
-                f"{artifacts.remote_prefix}/{artifacts.bundle_path.name}",
-            ),
-            (
-                artifacts.sha256_path,
-                f"{artifacts.remote_prefix}/{artifacts.sha256_path.name}",
-            ),
-            (
-                artifacts.metadata_path,
-                f"{artifacts.remote_prefix}/{artifacts.metadata_path.name}",
-            ),
-        ]
+    object_storage.upload_file(
+        artifacts.bundle_path,
+        f"{artifacts.remote_prefix}/{artifacts.bundle_path.name}",
+        payload_hash=bundle_sha256,
+    )
+    object_storage.upload_file(
+        artifacts.sha256_path,
+        f"{artifacts.remote_prefix}/{artifacts.sha256_path.name}",
+    )
+    object_storage.upload_file(
+        artifacts.metadata_path,
+        f"{artifacts.remote_prefix}/{artifacts.metadata_path.name}",
     )
     write_github_outputs(artifacts)
 
