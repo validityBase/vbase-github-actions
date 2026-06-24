@@ -61,6 +61,15 @@ def build_artifacts(workspace: Path, backup_prefix: str, bundle_name: str) -> Ba
 
 
 def fetch_all_refs(workspace: Path) -> None:
+    is_shallow = run_git(
+        "rev-parse",
+        "--is-shallow-repository",
+        cwd=workspace,
+        log_output=False,
+    ).strip()
+    if is_shallow == "true":
+        run_git("fetch", "--unshallow", "--tags", "origin", cwd=workspace)
+
     run_git(
         "fetch",
         "--force",

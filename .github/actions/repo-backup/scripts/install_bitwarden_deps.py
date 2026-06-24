@@ -52,13 +52,14 @@ def install_dependencies(vbase_common_ref: str) -> None:
 def main() -> int:
     """CLI entry point."""
     netrc_path = Path.home() / ".netrc"
+    netrc_existed = netrc_path.exists()
     original_contents: bytes | None = None
     original_mode: int | None = None
     try:
         token = require_env("VBASE_COMMON_REPO_READ_TOKEN")
         vbase_common_ref = require_env("VBASE_COMMON_REF")
 
-        if netrc_path.exists():
+        if netrc_existed:
             original_contents = netrc_path.read_bytes()
             original_mode = netrc_path.stat().st_mode & 0o777
 
@@ -69,10 +70,10 @@ def main() -> int:
         print(f"[ERROR] {exc}", file=sys.stderr)
         return 1
     finally:
-        if original_contents is not None:
+        if netrc_existed and original_contents is not None:
             netrc_path.write_bytes(original_contents)
             netrc_path.chmod(original_mode or (stat.S_IRUSR | stat.S_IWUSR))
-        else:
+        elif not netrc_existed:
             netrc_path.unlink(missing_ok=True)
 
 
