@@ -22,6 +22,9 @@ Sets up Node.js, enables `actions/setup-node` built-in npm caching, validates
 the package lockfile, and installs dependencies with
 `npm ci --ignore-scripts`.
 
+This hardened behavior is a breaking change from the `@v1` action contract and
+must be published under a new major release ref such as `@v2`.
+
 Optional inputs:
 - `node-version`: defaults to `20`.
 - `package-lock-path`: defaults to `package-lock.json`.
@@ -38,13 +41,19 @@ It must not cache `node_modules`; `npm ci` removes and recreates that directory.
 The action parses `npm-ci-args` as shell-style arguments and invokes `npm ci`
 with an array expansion so quoted values are preserved and glob patterns are not
 expanded by the shell. `--ignore-scripts` is always added so dependency
-install-time lifecycle scripts do not run implicitly in CI.
+install-time lifecycle scripts do not run implicitly in CI. `npm-ci-args` must
+not contain `--`, `--ignore-scripts`, `--ignore-scripts=...`, or
+`--no-ignore-scripts`, because callers must not be able to override this
+security control.
 
 ## setup-cypress-deps
 
 Sets up Node.js, enables npm cache through `actions/setup-node`, caches the
 Cypress binary through `actions/cache`, installs npm dependencies with
 `npm ci --ignore-scripts`, and verifies or installs Cypress explicitly.
+
+This hardened behavior is a breaking change from the `@v1` action contract and
+must be published under a new major release ref such as `@v2`.
 
 Optional inputs:
 - `node-version`: defaults to `24`.

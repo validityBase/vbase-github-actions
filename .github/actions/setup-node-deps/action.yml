@@ -109,4 +109,18 @@ runs:
           done < "$npm_ci_args_file"
         fi
 
-        npm ci "${npm_ci_args[@]}" --ignore-scripts
+        for npm_ci_arg in "${npm_ci_args[@]}"; do
+          if [ "$npm_ci_arg" = "--" ]; then
+            echo "npm-ci-args must not contain '--' because lifecycle scripts are disabled by this action." >&2
+            exit 1
+          fi
+
+          case "$npm_ci_arg" in
+            --ignore-scripts|--ignore-scripts=*|--no-ignore-scripts)
+              echo "npm-ci-args must not configure ignore-scripts; it is enforced by this action." >&2
+              exit 1
+              ;;
+          esac
+        done
+
+        npm ci --ignore-scripts "${npm_ci_args[@]}"
