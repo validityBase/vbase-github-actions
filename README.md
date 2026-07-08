@@ -31,7 +31,8 @@ with:
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
-the caller's lockfile, and installs dependencies with `npm ci`.
+the caller's lockfile, and installs dependencies with
+`npm ci --ignore-scripts`.
 
 ```yaml
 - name: Set up Node.js and install dependencies
@@ -45,13 +46,14 @@ the caller's lockfile, and installs dependencies with `npm ci`.
 `package-lock.json`, and `working-directory` defaults to the repository root.
 Use `working-directory` plus a matching `package-lock-path` for projects whose
 Node package lives in a subdirectory. Use `npm-ci-args` for repository-specific
-install flags such as `--prefer-offline --no-audit --no-fund`.
+install flags such as `--prefer-offline --no-audit --no-fund`. Install-time
+lifecycle scripts are always disabled; run any trusted setup step explicitly.
 
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
-dependencies with `npm ci`, and verifies or installs Cypress from the caller's
-lockfile.
+dependencies with `npm ci --ignore-scripts`, and explicitly verifies or installs
+Cypress from the caller's lockfile.
 
 ```yaml
 - name: Install NPM dependencies and Cypress

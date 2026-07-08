@@ -109,4 +109,4 @@ runs:
           done < "$npm_ci_args_file"
         fi
 
-        npm ci "${npm_ci_args[@]}"
+        npm ci "${npm_ci_args[@]}" --ignore-scripts
