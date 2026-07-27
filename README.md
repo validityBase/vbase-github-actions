@@ -30,9 +30,9 @@ with:
 
 ### run-with-bitwarden-env
 
-Installs the shared `bw-sm` Bitwarden env CLI from `vbase-common` without
-dependencies, loads one Bitwarden project, masks loaded secret values in
-GitHub logs, and runs a command with those values in process environment.
+Loads one Bitwarden project through the already installed `bw-sm` CLI, masks
+loaded secret values in GitHub logs, and runs a command with those values in
+process environment.
 
 ```yaml
 - name: Run E2E tests with Bitwarden env
@@ -40,16 +40,14 @@ GitHub logs, and runs a command with those values in process environment.
   with:
     project: vbase-django-tools-cypress-runner-stg
     bitwarden-access-token: ${{ secrets.VBASE_DJANGO_TOOLS_CYPRESS_RUNNER_STG_TOKEN }}
-    vbase-common-repo-read-token: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
     command: |
       python -m unittest discover -s tests -v
 ```
 
 Use `project-id` instead of `project` when the workflow should avoid resolving
-by name. Install `bitwarden-sdk` through normal locked Python requirements
-before this action when using the default `api` backend. The action keeps
-Bitwarden secrets scoped to the command step instead of exporting them to later
-workflow steps.
+by name. Install `bw-sm` and `bitwarden-sdk` through normal locked/private
+Python requirements before this action. The action keeps Bitwarden secrets
+scoped to the command step instead of exporting them to later workflow steps.
 
 ### setup-node-deps
 

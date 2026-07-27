@@ -1,6 +1,6 @@
 name: Run with Bitwarden env
 description: >
-  Install shared Bitwarden env tooling and run a command with project secrets.
+  Run a command with Bitwarden project secrets.
 # cspell:ignore btenv pipefail
 
 inputs:
@@ -9,9 +9,6 @@ inputs:
     required: true
   bitwarden-access-token:
     description: Bitwarden machine access token for the selected project.
-    required: true
-  vbase-common-repo-read-token:
-    description: GitHub token with read access to validityBase/vbase-common.
     required: true
   project:
     description: Bitwarden project name.
@@ -34,10 +31,6 @@ inputs:
     description: Bitwarden backend passed to vbase-btenv.
     required: false
     default: api
-  vbase-common-ref:
-    description: Git ref of validityBase/vbase-common to install bw-sm from.
-    required: false
-    default: main
   working-directory:
     description: Directory where the command should run.
     required: false
@@ -54,7 +47,6 @@ runs:
         BTENV_PROJECT_ID: ${{ inputs.project-id }}
         BTENV_TOKEN_ENV: ${{ inputs.token-env }}
         BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
-        VBASE_COMMON_REPO_READ_TOKEN: ${{ inputs.vbase-common-repo-read-token }}
       run: |
         set -euo pipefail
 
@@ -77,28 +69,6 @@ runs:
           echo "bitwarden-access-token input must not be empty" >&2
           exit 1
         fi
-
-        if [ -z "$VBASE_COMMON_REPO_READ_TOKEN" ]; then
-          echo "vbase-common-repo-read-token input must not be empty" >&2
-          exit 1
-        fi
-
-    - name: Install Bitwarden env tooling
-      shell: bash
-      env:
-        VBASE_COMMON_REPO_READ_TOKEN: ${{ inputs.vbase-common-repo-read-token }}
-        VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
-      run: |
-        set -euo pipefail
-
-        echo "::add-mask::${VBASE_COMMON_REPO_READ_TOKEN}"
-        printf 'machine github.com\nlogin x-access-token\npassword %s\n' "$VBASE_COMMON_REPO_READ_TOKEN" > ~/.netrc
-        chmod 600 ~/.netrc
-
-        package_url="git+https://github.com"
-        package_ref="/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
-        python -m pip install --quiet --no-deps \
-          "${package_url}${package_ref}#subdirectory=bw_sm"
 
     - name: Run command with Bitwarden env
       shell: bash

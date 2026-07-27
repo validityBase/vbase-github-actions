@@ -18,15 +18,12 @@ caching to `actions/setup-python` with `cache: pip` and `cache-dependency-path`.
 
 ## run-with-bitwarden-env
 
-Installs the `bw-sm` CLI from the `bw_sm` subpackage in `vbase-common` with
-`--no-deps`, then runs one caller-provided bash command with the selected
-Bitwarden project loaded into that process environment.
+Runs one caller-provided bash command with the selected Bitwarden project
+loaded into that process environment through the already installed `bw-sm` CLI.
 
 Required inputs:
 - `command`: bash command to execute.
 - `bitwarden-access-token`: project-scoped Bitwarden machine access token.
-- `vbase-common-repo-read-token`: GitHub token with read access to
-  `validityBase/vbase-common`.
 
 Project selector inputs:
 - `project`: Bitwarden project name.
@@ -38,14 +35,13 @@ Optional inputs:
 - `org-id`: defaults to the vBase Bitwarden organization id.
 - `token-env`: defaults to `BWS_ACCESS_TOKEN`.
 - `backend`: defaults to `api`.
-- `vbase-common-ref`: defaults to `main`.
 - `working-directory`: defaults to `.`.
 
-Caller workflows should install `bitwarden-sdk` through normal locked Python
-requirements before using the default `api` backend. The action must not export
-Bitwarden secrets through `$GITHUB_ENV`; secrets stay scoped to the command
-process. It must mask the Bitwarden access token and all loaded secret values
-before running the caller command.
+Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
+locked/private Python requirements before using the default `api` backend. The
+action must not export Bitwarden secrets through `$GITHUB_ENV`; secrets stay
+scoped to the command process. It must mask the Bitwarden access token and all
+loaded secret values before running the caller command.
 
 ## setup-node-deps
 
