@@ -92,7 +92,10 @@ runs:
         set -euo pipefail
 
         echo "::add-mask::${VBASE_COMMON_REPO_READ_TOKEN}"
-        package_url="git+https://x-access-token:${VBASE_COMMON_REPO_READ_TOKEN}@github.com"
+        printf 'machine github.com\nlogin x-access-token\npassword %s\n' "$VBASE_COMMON_REPO_READ_TOKEN" > ~/.netrc
+        chmod 600 ~/.netrc
+
+        package_url="git+https://github.com"
         package_ref="/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
         python -m pip install --quiet --no-deps \
           "${package_url}${package_ref}#subdirectory=bw_sm"
