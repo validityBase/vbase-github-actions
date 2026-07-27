@@ -1,0 +1,128 @@
+name: Run with Bitwarden env
+description: >
+  Install shared Bitwarden env tooling and run a command with project secrets.
+# cspell:ignore btenv pipefail
+
+inputs:
+  command:
+    description: Bash command to run after loading Bitwarden project secrets.
+    required: true
+  bitwarden-access-token:
+    description: Bitwarden machine access token for the selected project.
+    required: true
+  vbase-common-repo-read-token:
+    description: GitHub token with read access to validityBase/vbase-common.
+    required: true
+  project:
+    description: Bitwarden project name.
+    required: false
+    default: ""
+  project-id:
+    description: Bitwarden project id. Use when project is omitted.
+    required: false
+    default: ""
+  org-id:
+    description: Bitwarden organization id.
+    required: false
+    default: f8c92883-7bb9-4d29-a2d4-b137014f77af
+  token-env:
+    description: >
+      Environment variable name to expose the Bitwarden access token to vbase-btenv.
+    required: false
+    default: BWS_ACCESS_TOKEN
+  backend:
+    description: Bitwarden backend passed to vbase-btenv.
+    required: false
+    default: api
+  vbase-common-ref:
+    description: Git ref of validityBase/vbase-common to install bw-sm from.
+    required: false
+    default: main
+  working-directory:
+    description: Directory where the command should run.
+    required: false
+    default: .
+
+runs:
+  using: composite
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        BTENV_COMMAND: ${{ inputs.command }}
+        BTENV_PROJECT: ${{ inputs.project }}
+        BTENV_PROJECT_ID: ${{ inputs.project-id }}
+        BTENV_TOKEN_ENV: ${{ inputs.token-env }}
+        BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
+        VBASE_COMMON_REPO_READ_TOKEN: ${{ inputs.vbase-common-repo-read-token }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$BTENV_COMMAND" ]; then
+          echo "command input must not be empty" >&2
+          exit 1
+        fi
+
+        if [ -z "$BTENV_PROJECT" ] && [ -z "$BTENV_PROJECT_ID" ]; then
+          echo "project or project-id input must be provided" >&2
+          exit 1
+        fi
+
+        if [[ ! "$BTENV_TOKEN_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+          echo "token-env must be a valid shell environment variable name" >&2
+          exit 1
+        fi
+
+        if [ -z "$BTENV_ACCESS_TOKEN" ]; then
+          echo "bitwarden-access-token input must not be empty" >&2
+          exit 1
+        fi
+
+        if [ -z "$VBASE_COMMON_REPO_READ_TOKEN" ]; then
+          echo "vbase-common-repo-read-token input must not be empty" >&2
+          exit 1
+        fi
+
+    - name: Install Bitwarden env tooling
+      shell: bash
+      env:
+        VBASE_COMMON_REPO_READ_TOKEN: ${{ inputs.vbase-common-repo-read-token }}
+        VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
+      run: |
+        set -euo pipefail
+
+        echo "::add-mask::${VBASE_COMMON_REPO_READ_TOKEN}"
+        package_url="git+https://${VBASE_COMMON_REPO_READ_TOKEN}@github.com"
+        package_ref="/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
+        python -m pip install --quiet --no-deps \
+          "${package_url}${package_ref}#subdirectory=bw_sm"
+
+    - name: Run command with Bitwarden env
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BTENV_COMMAND: ${{ inputs.command }}
+        BTENV_PROJECT: ${{ inputs.project }}
+        BTENV_PROJECT_ID: ${{ inputs.project-id }}
+        BTENV_ORG_ID: ${{ inputs.org-id }}
+        BTENV_TOKEN_ENV: ${{ inputs.token-env }}
+        BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
+        BTENV_BACKEND: ${{ inputs.backend }}
+      run: |
+        set -euo pipefail
+
+        echo "::add-mask::${BTENV_ACCESS_TOKEN}"
+        export "${BTENV_TOKEN_ENV}=${BTENV_ACCESS_TOKEN}"
+
+        btenv_args=(run --token-env "$BTENV_TOKEN_ENV" --backend "$BTENV_BACKEND")
+        if [ -n "$BTENV_PROJECT" ]; then
+          btenv_args+=(--project "$BTENV_PROJECT")
+        fi
+        if [ -n "$BTENV_PROJECT_ID" ]; then
+          btenv_args+=(--project-id "$BTENV_PROJECT_ID")
+        fi
+        if [ -n "$BTENV_ORG_ID" ]; then
+          btenv_args+=(--org-id "$BTENV_ORG_ID")
+        fi
+
+        python -m bw_sm.env "${btenv_args[@]}" -- bash -euo pipefail -c "$BTENV_COMMAND"

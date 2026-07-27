@@ -28,6 +28,29 @@ with:
   python-version: "3.11"
 ```
 
+### run-with-bitwarden-env
+
+Installs the shared `bw-sm` Bitwarden env CLI from `vbase-common` without
+dependencies, loads one Bitwarden project, masks loaded secret values in
+GitHub logs, and runs a command with those values in process environment.
+
+```yaml
+- name: Run E2E tests with Bitwarden env
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  with:
+    project: vbase-django-tools-cypress-runner-stg
+    bitwarden-access-token: ${{ secrets.VBASE_DJANGO_TOOLS_CYPRESS_RUNNER_STG_TOKEN }}
+    vbase-common-repo-read-token: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+    command: |
+      python -m unittest discover -s tests -v
+```
+
+Use `project-id` instead of `project` when the workflow should avoid resolving
+by name. Install `bitwarden-sdk` through normal locked Python requirements
+before this action when using the default `api` backend. The action keeps
+Bitwarden secrets scoped to the command step instead of exporting them to later
+workflow steps.
+
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
