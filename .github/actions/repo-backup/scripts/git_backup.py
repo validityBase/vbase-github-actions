@@ -184,4 +184,4 @@ def run(*args: str, cwd: Path, log_output: bool = True) -> str:
 
 
 def redact_credentials(text: str) -> str:
-    return re.sub(r"https://[^/@\s]+@", "https://***@", text)
+    return re.sub(r"(https?)://[^/@\s]+@", r"\1://***@", text)

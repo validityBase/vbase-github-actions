@@ -122,4 +122,4 @@ class ObjectStorageUploader:
     def _redact_output(self, text: str) -> str:
         text = text.replace(self.access_key_id, "***")
         text = text.replace(self.secret_access_key, "***")
-        return re.sub(r"https://[^/@\s]+@", "https://***@", text)
+        return re.sub(r"(https?)://[^/@\s]+@", r"\1://***@", text)
