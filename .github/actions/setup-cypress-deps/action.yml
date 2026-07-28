@@ -42,7 +42,7 @@ runs:
         set -euo pipefail
 
         export CYPRESS_CACHE_FOLDER=~/.cache/Cypress
-        npm ci --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000
+        npm ci --ignore-scripts --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000
 
         CYPRESS_BIN=./node_modules/.bin/cypress
         if [ ! -x "$CYPRESS_BIN" ]; then

@@ -31,11 +31,12 @@ with:
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
-the caller's lockfile, and installs dependencies with `npm ci`.
+the caller's lockfile, and installs dependencies with
+`npm ci --ignore-scripts`.
 
 ```yaml
 - name: Set up Node.js and install dependencies
-  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v1
+  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v2
   with:
     node-version: "20"
     package-lock-path: package-lock.json
@@ -45,17 +46,19 @@ the caller's lockfile, and installs dependencies with `npm ci`.
 `package-lock.json`, and `working-directory` defaults to the repository root.
 Use `working-directory` plus a matching `package-lock-path` for projects whose
 Node package lives in a subdirectory. Use `npm-ci-args` for repository-specific
-install flags such as `--prefer-offline --no-audit --no-fund`.
+install flags such as `--prefer-offline --no-audit --no-fund`. Install-time
+lifecycle scripts are always disabled; run any trusted setup step explicitly.
+`npm-ci-args` must not contain `--` or configure `ignore-scripts`.
 
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
-dependencies with `npm ci`, and verifies or installs Cypress from the caller's
-lockfile.
+dependencies with `npm ci --ignore-scripts`, and explicitly verifies or installs
+Cypress from the caller's lockfile.
 
 ```yaml
 - name: Install NPM dependencies and Cypress
-  uses: validityBase/vbase-github-actions/.github/actions/setup-cypress-deps@v1
+  uses: validityBase/vbase-github-actions/.github/actions/setup-cypress-deps@v2
   with:
     node-version: "24"
 ```
@@ -168,6 +171,9 @@ release refs such as `@v1` or full commit SHAs, depending on the repository's
 security policy.
 
 Breaking changes require a new major release ref such as `@v2`.
+Use `@v2` for Node dependency setup actions that enforce
+`npm ci --ignore-scripts`; this is a breaking hardening change for callers that
+previously relied on install-time lifecycle scripts.
 
 This repository is public. Do not commit secret values, webhook URLs, private
 tokens, or repository-specific private configuration. Secrets must be supplied by
