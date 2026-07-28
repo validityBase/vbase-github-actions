@@ -25,6 +25,35 @@ Prefer one installable lock file per job, such as `requirements-dev.txt`; if
 multiple files are listed, each file must satisfy pip hash-checking mode on its
 own.
 
+## run-with-bitwarden-env
+
+Runs one caller-provided bash command with the selected Bitwarden project
+loaded into that process environment through `python -m bw_sm.env` from the
+already installed `bw-sm` package.
+
+Required inputs:
+- `command`: bash command to execute.
+- `bitwarden-access-token`: project-scoped Bitwarden machine access token.
+
+Project selector inputs:
+- `project`: Bitwarden project name.
+- `project-id`: Bitwarden project id.
+
+At least one project selector is required.
+
+Optional inputs:
+- `org-id`: defaults to the vBase Bitwarden organization id.
+- `token-env`: defaults to `BWS_ACCESS_TOKEN`.
+- `backend`: defaults to `api`.
+- `working-directory`: defaults to `.`.
+
+Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
+locked/private Python requirements before using the default `api` backend. The
+action must not export Bitwarden secrets through `$GITHUB_ENV`; secrets stay
+scoped to the command process. The composite action must mask the Bitwarden
+access token; `bw_sm.env` is responsible for masking loaded secret values before
+running the caller command.
+
 ## setup-node-deps
 
 Sets up Node.js, enables `actions/setup-node` built-in npm caching, validates

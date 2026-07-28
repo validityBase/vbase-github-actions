@@ -47,6 +47,28 @@ lock file per job, for example `requirements-dev.txt`; if multiple files are
 listed, each file must be independently installable in hash-checking mode.
 See `internal/specs/python-dependency-hashes.md` for the migration pattern.
 
+### run-with-bitwarden-env
+
+Loads one Bitwarden project through the already installed `bw-sm` package and
+runs a command with those values in process environment. The action masks the
+Bitwarden access token; masking loaded project secret values is delegated to
+`bw_sm.env`.
+
+```yaml
+- name: Run E2E tests with Bitwarden env
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  with:
+    project: vbase-django-tools-cypress-runner-stg
+    bitwarden-access-token: ${{ secrets.VBASE_DJANGO_TOOLS_CYPRESS_RUNNER_STG_TOKEN }}
+    command: |
+      python -m unittest discover -s tests -v
+```
+
+Use `project-id` instead of `project` when the workflow should avoid resolving
+by name. Install `bw-sm` and `bitwarden-sdk` through normal locked/private
+Python requirements before this action. The action keeps Bitwarden secrets
+scoped to the command step instead of exporting them to later workflow steps.
+
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
