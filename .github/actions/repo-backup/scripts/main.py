@@ -15,7 +15,7 @@ from .git_backup import (
     write_github_outputs,
     write_metadata,
 )
-from .object_storage_client import ObjectStorageClient
+from .object_storage_uploader import ObjectStorageUploader
 
 
 def run() -> None:
@@ -32,7 +32,7 @@ def run() -> None:
     write_metadata(workspace, artifacts, bundle_sha256)
     smoke_test_restore(workspace, artifacts.bundle_path)
 
-    object_storage = ObjectStorageClient(
+    object_storage = ObjectStorageUploader(
         access_key_id=require_env("OBJECT_STORAGE_ACCESS_KEY_ID"),
         secret_access_key=require_env("OBJECT_STORAGE_SECRET_ACCESS_KEY"),
         bucket_name=require_env("OBJECT_STORAGE_BUCKET_NAME"),
@@ -42,7 +42,6 @@ def run() -> None:
     object_storage.upload_file(
         artifacts.bundle_path,
         f"{artifacts.remote_prefix}/{artifacts.bundle_path.name}",
-        payload_hash=bundle_sha256,
     )
     object_storage.upload_file(
         artifacts.sha256_path,

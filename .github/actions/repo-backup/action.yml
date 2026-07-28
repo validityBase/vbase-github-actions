@@ -57,6 +57,10 @@ runs:
       with:
         python-version: "3.12"
 
+    - name: Check AWS CLI
+      shell: bash
+      run: aws --version
+
     - name: Create and upload repo backup
       id: backup
       shell: bash

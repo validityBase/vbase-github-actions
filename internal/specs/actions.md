@@ -178,9 +178,9 @@ The action uploads the bundle, checksum, and metadata to:
 <backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
 ```
 
-The implementation intentionally uses the S3-compatible API through the Python
-standard library. It avoids runtime dependency installation and avoids a
-third-party upload action in the production backup path. Object storage
-credential values must be resolved by the caller's approved secret-management
-process, passed as action inputs at runtime, and never logged. The action does
-not back up Git LFS objects or submodule repositories.
+The implementation uploads with AWS CLI's `aws s3 cp` command against the
+configured S3-compatible endpoint, while keeping the action inputs
+provider-independent. Object storage credential values must be resolved by the
+caller's approved secret-management process, passed as action inputs at runtime,
+and never logged. Self-hosted runners must provide AWS CLI. The action does not
+back up Git LFS objects or submodule repositories.

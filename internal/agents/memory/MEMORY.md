@@ -23,7 +23,8 @@ Actions and reusable workflows.
 - Repository backup logic lives in `.github/actions/repo-backup`; the public
   reusable workflow is `.github/workflows/repo-backup.yml`. Caller repos own
   schedules and pass the project-scoped Bitwarden token; the workflow resolves
-  S3-compatible object storage credentials at runtime.
+  S3-compatible object storage credentials at runtime and uploads through AWS
+  CLI against the configured endpoint.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
   `AGENTS.md` stay small and point here.
 

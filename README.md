@@ -247,8 +247,9 @@ Objects are written under:
 <backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
 ```
 
-The action uploads through the S3-compatible API and does not install `boto3`,
-cloud-provider SDKs, or third-party upload actions.
+The action uploads through AWS CLI's `aws s3 cp` command pointed at the
+configured S3-compatible endpoint. The public inputs stay provider-independent;
+self-hosted runners must have AWS CLI installed before using the action.
 
 ## Release Policy
 
@@ -362,9 +363,10 @@ The reusable workflow checks out the caller repository with full history, then
 checks out this repository at the same ref as the reusable workflow so the
 matching backup implementation is used. It installs `vbase-common`, resolves
 the object storage credentials from the configured Bitwarden project, and backs
-up Git history via `git bundle`; Git LFS objects and submodule repositories need
-separate backup coverage if a production repository uses them. Bucket lifecycle
-rules and quarterly restore-test scheduling are managed outside this workflow.
+up Git history via `git bundle` plus `aws s3 cp`. Git LFS objects and submodule
+repositories need separate backup coverage if a production repository uses them.
+Bucket lifecycle rules and quarterly restore-test scheduling are managed outside
+this workflow.
 
 `VBASE_COMMON_REPO_READ_TOKEN` is used only to install `vbase-common`.
 `BWS_ACCESS_TOKEN` is the Bitwarden machine access token for the backup project.

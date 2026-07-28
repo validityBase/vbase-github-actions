@@ -110,7 +110,7 @@ object storage:
 - run the shared backup implementation.
 
 This keeps the reusable workflow as the public entry point and keeps Git backup
-logic plus the S3-compatible upload adapter in the shared action implementation.
+logic plus the AWS CLI upload adapter in the shared action implementation.
 It also lets branch/SHA-based callers test workflow changes before a release tag
 is moved.
 
