@@ -28,11 +28,31 @@ with:
   python-version: "3.11"
 ```
 
+Hashed lock files can opt in to pip hash-checking mode:
+
+```yaml
+- name: Set up Python and install hashed dependencies
+  uses: validityBase/vbase-github-actions/.github/actions/setup-python-deps@v1
+  with:
+    requirements-files: |
+      requirements.txt
+    python-version: "3.11"
+    require-hashes: true
+```
+
+`require-hashes` defaults to `false` so existing repositories continue to work.
+When it is `true`, each listed requirements file is installed with
+`python -m pip install --require-hashes -r <file>`. Prefer passing one generated
+lock file per job, for example `requirements-dev.txt`; if multiple files are
+listed, each file must be independently installable in hash-checking mode.
+See `internal/specs/python-dependency-hashes.md` for the migration pattern.
+
 ### run-with-bitwarden-env
 
-Loads one Bitwarden project through the already installed `bw-sm` CLI, masks
-loaded secret values in GitHub logs, and runs a command with those values in
-process environment.
+Loads one Bitwarden project through the already installed `bw-sm` package and
+runs a command with those values in process environment. The action masks the
+Bitwarden access token; masking loaded project secret values is delegated to
+`bw_sm.env`.
 
 ```yaml
 - name: Run E2E tests with Bitwarden env
@@ -52,11 +72,12 @@ scoped to the command step instead of exporting them to later workflow steps.
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
-the caller's lockfile, and installs dependencies with `npm ci`.
+the caller's lockfile, and installs dependencies with
+`npm ci --ignore-scripts`.
 
 ```yaml
 - name: Set up Node.js and install dependencies
-  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v1
+  uses: validityBase/vbase-github-actions/.github/actions/setup-node-deps@v2
   with:
     node-version: "20"
     package-lock-path: package-lock.json
@@ -66,17 +87,19 @@ the caller's lockfile, and installs dependencies with `npm ci`.
 `package-lock.json`, and `working-directory` defaults to the repository root.
 Use `working-directory` plus a matching `package-lock-path` for projects whose
 Node package lives in a subdirectory. Use `npm-ci-args` for repository-specific
-install flags such as `--prefer-offline --no-audit --no-fund`.
+install flags such as `--prefer-offline --no-audit --no-fund`. Install-time
+lifecycle scripts are always disabled; run any trusted setup step explicitly.
+`npm-ci-args` must not contain `--` or configure `ignore-scripts`.
 
 ### setup-cypress-deps
 
 Sets up Node.js, enables npm cache, caches the Cypress binary, installs npm
-dependencies with `npm ci`, and verifies or installs Cypress from the caller's
-lockfile.
+dependencies with `npm ci --ignore-scripts`, and explicitly verifies or installs
+Cypress from the caller's lockfile.
 
 ```yaml
 - name: Install NPM dependencies and Cypress
-  uses: validityBase/vbase-github-actions/.github/actions/setup-cypress-deps@v1
+  uses: validityBase/vbase-github-actions/.github/actions/setup-cypress-deps@v2
   with:
     node-version: "24"
 ```
@@ -189,6 +212,9 @@ release refs such as `@v1` or full commit SHAs, depending on the repository's
 security policy.
 
 Breaking changes require a new major release ref such as `@v2`.
+Use `@v2` for Node dependency setup actions that enforce
+`npm ci --ignore-scripts`; this is a breaking hardening change for callers that
+previously relied on install-time lifecycle scripts.
 
 This repository is public. Do not commit secret values, webhook URLs, private
 tokens, or repository-specific private configuration. Secrets must be supplied by
@@ -218,6 +244,16 @@ Pass `PRIVATE_GITHUB_TOKEN` when requirements install private GitHub
 dependencies. The workflow configures `~/.netrc` and also exposes the token as
 `VBASE_COMMON_REPO_READ_TOKEN` and `VBASE_REPO_READ_TOKEN` for existing
 requirements files that use environment substitution.
+`require-hashes` defaults to `false`; set it to `true` after the caller
+repository has migrated the selected requirements file to a generated hashed
+lock file:
+
+```yaml
+with:
+  requirements-files: |
+    requirements-dev.txt
+  require-hashes: true
+```
 
 ### publish-docs
 
@@ -249,3 +285,4 @@ also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
+For migrated docs lock files, pass `require-hashes: true`.

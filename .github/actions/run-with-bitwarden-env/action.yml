@@ -24,11 +24,11 @@ inputs:
     default: f8c92883-7bb9-4d29-a2d4-b137014f77af
   token-env:
     description: >
-      Environment variable name to expose the Bitwarden access token to vbase-btenv.
+      Environment variable name used to pass the Bitwarden access token to bw_sm.env.
     required: false
     default: BWS_ACCESS_TOKEN
   backend:
-    description: Bitwarden backend passed to vbase-btenv.
+    description: Bitwarden backend passed to bw_sm.env.
     required: false
     default: api
   working-directory:
@@ -47,11 +47,22 @@ runs:
         BTENV_PROJECT_ID: ${{ inputs.project-id }}
         BTENV_TOKEN_ENV: ${{ inputs.token-env }}
         BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
+        BTENV_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
 
         if [ -z "$BTENV_COMMAND" ]; then
           echo "command input must not be empty" >&2
+          exit 1
+        fi
+
+        if [ -z "$BTENV_WORKING_DIRECTORY" ]; then
+          echo "working-directory input must not be empty" >&2
+          exit 1
+        fi
+
+        if [ ! -d "$BTENV_WORKING_DIRECTORY" ]; then
+          echo "working-directory must exist and be a directory: $BTENV_WORKING_DIRECTORY" >&2
           exit 1
         fi
 
