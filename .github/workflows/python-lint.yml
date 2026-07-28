@@ -17,6 +17,11 @@ on:
         description: Newline-separated requirements files to install before linting.
         required: true
         type: string
+      require-hashes:
+        description: Install Python requirements with pip --require-hashes.
+        required: false
+        type: boolean
+        default: false
       pylint-command:
         description: Command used to run pylint.
         required: false
@@ -67,9 +72,9 @@ jobs:
         with:
           requirements-files: ${{ inputs.requirements-files }}
           python-version: ${{ inputs.python-version }}
+          require-hashes: ${{ inputs.require-hashes }}
 
       - name: Run pylint
         working-directory: ${{ inputs.working-directory }}
         shell: bash
         run: ${{ inputs.pylint-command }}
-

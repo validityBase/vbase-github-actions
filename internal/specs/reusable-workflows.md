@@ -51,6 +51,8 @@ files that already use those environment variables.
 Important inputs:
 - `requirements-files` is required and supports one or more newline-separated
   requirements files.
+- `require-hashes` defaults to `false`; migrated repositories can set it to
+  `true` to install with pip `--require-hashes`.
 - `python-version` defaults to `3.11`.
 - `pylint-command` defaults to `pylint $(git ls-files '*.py')`.
 - `working-directory` defaults to the repository root.
@@ -77,6 +79,8 @@ dependencies.
 
 Important inputs:
 - `requirements-files` enables shared Python dependency setup.
+- `require-hashes` defaults to `false`; set it to `true` when the docs
+  requirements file is a generated hashed lock file.
 - `node-version` and `node-cache` enable Node.js setup when docs generation
   needs it.
 - `pre-publish-command` and `pre-publish-shell` run repository-specific docs
