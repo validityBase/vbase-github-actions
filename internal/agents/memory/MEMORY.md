@@ -11,6 +11,10 @@ Actions and reusable workflows.
   linting, E2E tests, coverage, documentation publication, and deployments.
 - Composite actions are used for focused reusable operations.
 - Composite actions currently live under `.github/actions/<name>/action.yml`.
+- `setup-python-deps` keeps `require-hashes` disabled by default for backwards
+  compatibility; migrated repositories opt in with `require-hashes: true`.
+- Python dependency hash migration guidance lives in
+  `internal/specs/python-dependency-hashes.md`.
 - Secrets are always supplied by caller repositories; this repo must not store
   secret values.
 - Downstream repositories should consume reviewed release refs such as `@v1` or

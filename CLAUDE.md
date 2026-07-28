@@ -16,4 +16,5 @@ This file is the minimal shared entry point for agentic work in this repository.
 - Persistent agent memory: [internal/agents/memory/MEMORY.md](internal/agents/memory/MEMORY.md)
 - Shared actions spec: [internal/specs/actions.md](internal/specs/actions.md)
 - Reusable workflows spec: [internal/specs/reusable-workflows.md](internal/specs/reusable-workflows.md)
+- Python dependency hashes: [internal/specs/python-dependency-hashes.md](internal/specs/python-dependency-hashes.md)
 - Release policy: [internal/specs/release-policy.md](internal/specs/release-policy.md)
