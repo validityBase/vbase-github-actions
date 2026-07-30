@@ -99,39 +99,5 @@ Known local workflow variants:
 
 ## repo-backup.yml
 
-`repo-backup.yml` standardizes production repository backups to S3-compatible
-object storage:
-
-- checkout the caller repository with full history;
-- checkout `validityBase/vbase-github-actions` at the reusable workflow ref into
-  `.vbase-github-actions`;
-- install `vbase-common` and the Bitwarden SDK;
-- resolve object storage credentials from the configured Bitwarden project;
-- invoke the shared `repo-backup` composite action with the resolved
-  credentials.
-
-This keeps the reusable workflow as the public entry point and keeps Git backup
-logic plus the AWS CLI upload adapter in the shared action implementation.
-It also lets branch/SHA-based callers test workflow changes before a release tag
-is moved.
-
-Required runtime secrets:
-- `VBASE_COMMON_REPO_READ_TOKEN`
-- `BWS_ACCESS_TOKEN`
-
-Important inputs:
-- `backup-prefix` defaults to `github-backups`.
-- `bundle-name` defaults to `repo.bundle`.
-- `bitwarden-project` defaults to `vbase-repo-backups`.
-- `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
-- `vbase-common-ref` defaults to `v0.1.1`.
-- `python-version` defaults to `3.12`.
-- `runner` defaults to `ubuntu-latest`.
-
-The workflow expects the caller repository to own scheduling, for example daily
-cron plus `workflow_dispatch`. It produces a full-history git bundle, checksum,
-and metadata object under a timestamped object storage prefix. Object storage
-credentials are read from the configured Bitwarden project and exposed only to
-later workflow steps through masked GitHub Actions environment values. Bucket
-lifecycle rules, credential provisioning, and quarterly restore tests are
-separate operational tasks outside this reusable workflow.
+The production repository backup workflow contract is canonical in
+`internal/specs/repo-backup.md#reusable-workflow-contract`.

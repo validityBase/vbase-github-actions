@@ -207,12 +207,9 @@ to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
 ### repo-backup action
 
-Low-level composite action for workflows that already checkout the caller
-repository and already resolve object storage credentials.
-
-Prefer the reusable `repo-backup.yml` workflow for production repository
-backups. Use this direct action only when the caller workflow needs to own
-checkout or orchestration itself.
+Low-level composite action for callers that already checkout the repository and
+resolve object storage credentials themselves. Prefer the reusable
+`repo-backup.yml` workflow for production backups.
 
 ```yaml
 - name: Create and upload repo backup
@@ -227,16 +224,11 @@ checkout or orchestration itself.
     object-storage-region: ${{ env.OBJECT_STORAGE_REGION }}
 ```
 
-The action is secret-source agnostic. Resolve the object storage credential
-values from the caller repository's approved secret-management process before
-this step, then pass them as the `object-storage-*` inputs.
-
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
 
-The canonical action contract is
-`internal/specs/actions.md#repo-backup`; this README keeps only the caller
-example.
+The canonical action and workflow contract is in
+`internal/specs/repo-backup.md`; this README keeps only caller examples.
 
 ## Release Policy
 
@@ -322,10 +314,9 @@ and `cmd`.
 
 ### repo-backup reusable workflow
 
-Reusable workflow for daily or manual production repository backups to
-S3-compatible object storage. The schedule lives in the caller repository; this
-workflow resolves Bitwarden credentials and invokes the shared `repo-backup`
-action.
+Reusable workflow for daily or manual production repository backups. The caller
+repository owns the schedule; this workflow resolves Bitwarden credentials and
+invokes the shared `repo-backup` action.
 
 ```yaml
 name: Daily repo backup
@@ -353,6 +344,5 @@ jobs:
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
 
-The canonical workflow contract is
-`internal/specs/reusable-workflows.md#repo-backupyml`; this README keeps only
-the caller example.
+The canonical action and workflow contract is in
+`internal/specs/repo-backup.md`; this README keeps only caller examples.

@@ -153,36 +153,5 @@ dependencies, rebuild and commit the bundled `index.js`.
 
 ## repo-backup
 
-Canonical contract for the low-level composite action that creates and uploads
-restore-friendly repository backups through the S3-compatible object storage
-API.
-
-Required inputs:
-- `object-storage-access-key-id`
-- `object-storage-secret-access-key`
-- `object-storage-bucket-name`
-- `object-storage-endpoint-url`
-- `object-storage-region`
-
-Optional inputs:
-- `python-version`: defaults to `3.12`.
-- `backup-prefix`: defaults to `github-backups`.
-- `bundle-name`: defaults to `repo.bundle`.
-
-The caller repository must already be checked out before this action runs. The
-action fetches all branch and tag refs, creates a full-history `git bundle`,
-verifies the bundle, writes `repo.bundle.sha256`, writes `metadata.json`, and
-smoke-tests restore with `git clone <bundle>` followed by `git fsck --strict`.
-
-The action uploads the bundle, checksum, and metadata to:
-
-```text
-<backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
-```
-
-The implementation uploads with AWS CLI's `aws s3 cp` command against the
-configured S3-compatible endpoint, while keeping the action inputs
-provider-independent. Object storage credential values must be resolved by the
-caller's approved secret-management process, passed as action inputs at runtime,
-and never logged. Self-hosted runners must provide AWS CLI. The action does not
-back up Git LFS objects or submodule repositories.
+The low-level composite action contract is canonical in
+`internal/specs/repo-backup.md#composite-action-contract`.

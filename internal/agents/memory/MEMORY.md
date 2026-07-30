@@ -20,8 +20,8 @@ Actions and reusable workflows.
   secret values.
 - Downstream repositories should consume reviewed release refs such as `@v1` or
   full commit SHAs, based on policy.
-- Repository backup contracts are canonical in `internal/specs/actions.md` and
-  `internal/specs/reusable-workflows.md`; keep `MEMORY.md` as a short index.
+- Repository backup contracts are canonical in
+  `internal/specs/repo-backup.md`; keep `MEMORY.md` as a short index.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
   `AGENTS.md` stay small and point here.
 
