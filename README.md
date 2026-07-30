@@ -167,7 +167,7 @@ that `doc-map.json` and the doc files are accessible.
 
 ```yaml
 - name: Validate docs against product sources
-  uses: validityBase/vbase-github-actions/validate-docs-against-product-sources@v1
+  uses: validityBase/vbase-github-actions/.github/actions/validate-docs-against-product-sources@v1
   with:
     mode: from_last_run
     product-repo: acme/my-library
@@ -328,10 +328,13 @@ For repositories with custom docs generation, put that logic in
 `pre-publish-command` and pass the generated directory through
 `source-docs-path`. If docs requirements need private `vbase-common` access,
 also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
+For migrated docs lock files, pass `require-hashes: true`.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
+
 ### repo-backup
+
 Reusable workflow for daily or manual production repository backups to
 S3-compatible object storage. The schedule lives in the caller repository; this
 workflow holds the shared backup implementation.
@@ -359,14 +362,10 @@ jobs:
       BWS_ACCESS_TOKEN: ${{ secrets.VBASE_REPO_BACKUP_SECRETS_TOKEN }}
 ```
 
-The reusable workflow checks out the caller repository with full history, then
-checks out this repository at the same ref as the reusable workflow so the
-matching backup implementation is used. It installs `vbase-common`, resolves
-the object storage credentials from the configured Bitwarden project, and backs
-up Git history via `git bundle` plus `aws s3 cp`. Git LFS objects and submodule
-repositories need separate backup coverage if a production repository uses them.
-Bucket lifecycle rules and quarterly restore-test scheduling are managed outside
-this workflow.
+The reusable workflow backs up Git history through the shared `repo-backup`
+action. Git LFS objects and submodule repositories need separate backup
+coverage if a production repository uses them. Bucket lifecycle rules and
+quarterly restore-test scheduling are managed outside this workflow.
 
 `VBASE_COMMON_REPO_READ_TOKEN` is used only to install `vbase-common`.
 `BWS_ACCESS_TOKEN` is the Bitwarden machine access token for the backup project.
@@ -376,4 +375,3 @@ The Bitwarden project must contain `OBJECT_STORAGE_ACCESS_KEY_ID`,
 
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
-For migrated docs lock files, pass `require-hashes: true`.

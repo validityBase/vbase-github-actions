@@ -20,11 +20,8 @@ Actions and reusable workflows.
   secret values.
 - Downstream repositories should consume reviewed release refs such as `@v1` or
   full commit SHAs, based on policy.
-- Repository backup logic lives in `.github/actions/repo-backup`; the public
-  reusable workflow is `.github/workflows/repo-backup.yml`. Caller repos own
-  schedules and pass the project-scoped Bitwarden token; the workflow resolves
-  S3-compatible object storage credentials at runtime and uploads through AWS
-  CLI against the configured endpoint.
+- Repository backup contracts are canonical in `internal/specs/actions.md` and
+  `internal/specs/reusable-workflows.md`; keep `MEMORY.md` as a short index.
 - Internal specs and memory live under `internal/`; root `CLAUDE.md` and
   `AGENTS.md` stay small and point here.
 
