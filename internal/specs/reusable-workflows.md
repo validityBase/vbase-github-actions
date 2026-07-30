@@ -107,7 +107,8 @@ object storage:
   `.vbase-github-actions`;
 - install `vbase-common` and the Bitwarden SDK;
 - resolve object storage credentials from the configured Bitwarden project;
-- run the shared backup implementation.
+- invoke the shared `repo-backup` composite action with the resolved
+  credentials.
 
 This keeps the reusable workflow as the public entry point and keeps Git backup
 logic plus the AWS CLI upload adapter in the shared action implementation.

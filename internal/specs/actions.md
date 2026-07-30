@@ -153,8 +153,9 @@ dependencies, rebuild and commit the bundled `index.js`.
 
 ## repo-backup
 
-Creates and uploads restore-friendly repository backups to a backup bucket
-through the S3-compatible object storage API.
+Canonical contract for the low-level composite action that creates and uploads
+restore-friendly repository backups through the S3-compatible object storage
+API.
 
 Required inputs:
 - `object-storage-access-key-id`
@@ -164,6 +165,7 @@ Required inputs:
 - `object-storage-region`
 
 Optional inputs:
+- `python-version`: defaults to `3.12`.
 - `backup-prefix`: defaults to `github-backups`.
 - `bundle-name`: defaults to `repo.bundle`.
 

@@ -45,6 +45,16 @@ def append_github_env(name: str, value: str) -> None:
         handle.write(f"{name}<<{delimiter}\n{value}\n{delimiter}\n")
 
 
+def append_github_output(name: str, value: str) -> None:
+    """Write one masked output for later workflow steps."""
+    github_output = os.environ.get("GITHUB_OUTPUT", "")
+    if not github_output:
+        return
+    delimiter = f"EOF_{uuid.uuid4().hex}"
+    with Path(github_output).open("a", encoding="utf-8") as handle:
+        handle.write(f"{name}<<{delimiter}\n{value}\n{delimiter}\n")
+
+
 def run() -> None:
     """Fetch required object storage secrets for later workflow steps."""
     project_name = require_env("BW_PROJECT")
@@ -69,6 +79,7 @@ def run() -> None:
         value = secrets[name]
         add_github_mask(value)
         append_github_env(name, value)
+        append_github_output(name, value)
 
     print(
         "Resolved object storage backup credentials from Bitwarden project: "

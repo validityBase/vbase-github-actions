@@ -79,6 +79,7 @@ jobs:
         run: python .vbase-github-actions/.github/actions/repo-backup/scripts/install_bitwarden_deps.py
 
       - name: Resolve object storage credentials from Bitwarden
+        id: object-storage-credentials
         shell: bash
         env:
           BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
@@ -87,9 +88,13 @@ jobs:
         run: python .vbase-github-actions/.github/actions/repo-backup/scripts/bitwarden_env.py
 
       - name: Create and upload backup
-        shell: bash
-        working-directory: .vbase-github-actions/.github/actions/repo-backup
-        env:
-          BACKUP_PREFIX: ${{ inputs.backup-prefix }}
-          BUNDLE_NAME: ${{ inputs.bundle-name }}
-        run: python -m scripts.main
+        uses: ./.vbase-github-actions/.github/actions/repo-backup
+        with:
+          python-version: ${{ inputs.python-version }}
+          backup-prefix: ${{ inputs.backup-prefix }}
+          bundle-name: ${{ inputs.bundle-name }}
+          object-storage-access-key-id: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_ACCESS_KEY_ID }}
+          object-storage-secret-access-key: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
+          object-storage-bucket-name: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_BUCKET_NAME }}
+          object-storage-endpoint-url: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_ENDPOINT_URL }}
+          object-storage-region: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_REGION }}

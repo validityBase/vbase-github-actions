@@ -205,12 +205,10 @@ with:
 `product-repo-pat` is optional for public repositories; the action falls back
 to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
-### repo-backup
+### repo-backup action
 
-Creates a full-history git bundle for the checked-out caller repository,
-verifies the bundle, writes checksum and metadata files, smoke-tests restore,
-and uploads all backup artifacts to a private S3-compatible object storage
-bucket.
+Low-level composite action for workflows that already checkout the caller
+repository and already resolve object storage credentials.
 
 Prefer the reusable `repo-backup.yml` workflow for production repository
 backups. Use this direct action only when the caller workflow needs to own
@@ -236,20 +234,9 @@ this step, then pass them as the `object-storage-*` inputs.
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
 
-The action uploads:
-- `repo.bundle`
-- `repo.bundle.sha256`
-- `metadata.json`
-
-Objects are written under:
-
-```text
-<backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
-```
-
-The action uploads through AWS CLI's `aws s3 cp` command pointed at the
-configured S3-compatible endpoint. The public inputs stay provider-independent;
-self-hosted runners must have AWS CLI installed before using the action.
+The canonical action contract is
+`internal/specs/actions.md#repo-backup`; this README keeps only the caller
+example.
 
 ## Release Policy
 
@@ -333,11 +320,12 @@ Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
 
-### repo-backup
+### repo-backup reusable workflow
 
 Reusable workflow for daily or manual production repository backups to
 S3-compatible object storage. The schedule lives in the caller repository; this
-workflow holds the shared backup implementation.
+workflow resolves Bitwarden credentials and invokes the shared `repo-backup`
+action.
 
 ```yaml
 name: Daily repo backup
@@ -362,16 +350,9 @@ jobs:
       BWS_ACCESS_TOKEN: ${{ secrets.VBASE_REPO_BACKUP_SECRETS_TOKEN }}
 ```
 
-The reusable workflow backs up Git history through the shared `repo-backup`
-action. Git LFS objects and submodule repositories need separate backup
-coverage if a production repository uses them. Bucket lifecycle rules and
-quarterly restore-test scheduling are managed outside this workflow.
-
-`VBASE_COMMON_REPO_READ_TOKEN` is used only to install `vbase-common`.
-`BWS_ACCESS_TOKEN` is the Bitwarden machine access token for the backup project.
-The Bitwarden project must contain `OBJECT_STORAGE_ACCESS_KEY_ID`,
-`OBJECT_STORAGE_SECRET_ACCESS_KEY`, `OBJECT_STORAGE_BUCKET_NAME`,
-`OBJECT_STORAGE_ENDPOINT_URL`, and `OBJECT_STORAGE_REGION`.
-
 Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
 `repo-backup`.
+
+The canonical workflow contract is
+`internal/specs/reusable-workflows.md#repo-backupyml`; this README keeps only
+the caller example.
