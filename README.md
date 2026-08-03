@@ -167,7 +167,7 @@ that `doc-map.json` and the doc files are accessible.
 
 ```yaml
 - name: Validate docs against product sources
-  uses: validityBase/vbase-github-actions/validate-docs-against-product-sources@v1
+  uses: validityBase/vbase-github-actions/.github/actions/validate-docs-against-product-sources@v1
   with:
     mode: from_last_run
     product-repo: acme/my-library
@@ -205,6 +205,31 @@ with:
 `product-repo-pat` is optional for public repositories; the action falls back
 to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
+### repo-backup action
+
+Low-level composite action for callers that already checkout the repository and
+resolve object storage credentials themselves. Prefer the reusable
+`repo-backup.yml` workflow for production backups.
+
+```yaml
+- name: Create and upload repo backup
+  uses: validityBase/vbase-github-actions/.github/actions/repo-backup@<reviewed-ref>
+  with:
+    backup-prefix: github-backups
+    bundle-name: repo.bundle
+    object-storage-access-key-id: ${{ env.OBJECT_STORAGE_ACCESS_KEY_ID }}
+    object-storage-secret-access-key: ${{ env.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
+    object-storage-bucket-name: ${{ env.OBJECT_STORAGE_BUCKET_NAME }}
+    object-storage-endpoint-url: ${{ env.OBJECT_STORAGE_ENDPOINT_URL }}
+    object-storage-region: ${{ env.OBJECT_STORAGE_REGION }}
+```
+
+Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
+`repo-backup`.
+
+The canonical action and workflow contract is in
+`internal/specs/repo-backup.md`; this README keeps only caller examples.
+
 ## Release Policy
 
 Downstream repositories should reference this repository through reviewed
@@ -217,8 +242,8 @@ Use `@v2` for Node dependency setup actions that enforce
 previously relied on install-time lifecycle scripts.
 
 This repository is public. Do not commit secret values, webhook URLs, private
-tokens, or repository-specific private configuration. Secrets must be supplied by
-caller workflows.
+tokens, or repository-specific private configuration. Sensitive values must be
+resolved by caller workflows at runtime.
 
 ## Reusable Workflows
 
@@ -282,7 +307,42 @@ For repositories with custom docs generation, put that logic in
 `pre-publish-command` and pass the generated directory through
 `source-docs-path`. If docs requirements need private `vbase-common` access,
 also pass `VBASE_COMMON_REPO_READ_TOKEN` in the workflow `secrets` mapping.
+For migrated docs lock files, pass `require-hashes: true`.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
-For migrated docs lock files, pass `require-hashes: true`.
+
+### repo-backup reusable workflow
+
+Reusable workflow for daily or manual production repository backups. The caller
+repository owns the schedule; this workflow resolves Bitwarden credentials and
+invokes the shared `repo-backup` action.
+
+```yaml
+name: Daily repo backup
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup.yml@<reviewed-ref>
+    with:
+      backup-prefix: github-backups
+      bundle-name: repo.bundle
+      bitwarden-project: vbase-repo-backups
+    secrets:
+      VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+      BWS_ACCESS_TOKEN: ${{ secrets.VBASE_REPO_BACKUP_SECRETS_TOKEN }}
+```
+
+Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
+`repo-backup`.
+
+The canonical action and workflow contract is in
+`internal/specs/repo-backup.md`; this README keeps only caller examples.

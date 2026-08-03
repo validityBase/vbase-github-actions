@@ -1,0 +1,100 @@
+name: Repo Backup
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub runner label.
+        required: false
+        type: string
+        default: ubuntu-latest
+      python-version:
+        description: Python version used for Bitwarden and backup helpers.
+        required: false
+        type: string
+        default: "3.12"
+      vbase-common-ref:
+        description: Git ref of validityBase/vbase-common to install for Bitwarden helpers.
+        required: false
+        type: string
+        default: v0.1.1
+      bitwarden-project:
+        description: Bitwarden project containing object storage backup credentials.
+        required: false
+        type: string
+        default: vbase-repo-backups
+      bitwarden-org-id:
+        description: Bitwarden organization id for the backup secrets project.
+        required: false
+        type: string
+        default: f8c92883-7bb9-4d29-a2d4-b137014f77af
+      backup-prefix:
+        description: Object storage prefix for backups.
+        required: false
+        type: string
+        default: github-backups
+      bundle-name:
+        description: Backup bundle file name.
+        required: false
+        type: string
+        default: repo.bundle
+    secrets:
+      VBASE_COMMON_REPO_READ_TOKEN:
+        description: Token used to install validityBase/vbase-common.
+        required: true
+      BWS_ACCESS_TOKEN:
+        description: Bitwarden machine access token scoped to the backup project.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  repo-backup:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Checkout shared action source
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .vbase-github-actions
+
+      - name: Set up Python for backup helpers
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # actions/setup-python v6.2.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Bitwarden helper dependencies
+        env:
+          VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
+          VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
+        run: python .vbase-github-actions/.github/actions/repo-backup/scripts/install_bitwarden_deps.py
+
+      - name: Resolve object storage credentials from Bitwarden
+        id: object-storage-credentials
+        shell: bash
+        env:
+          BWS_ACCESS_TOKEN: ${{ secrets.BWS_ACCESS_TOKEN }}
+          BW_PROJECT: ${{ inputs.bitwarden-project }}
+          BW_ORG_ID: ${{ inputs.bitwarden-org-id }}
+        run: python .vbase-github-actions/.github/actions/repo-backup/scripts/bitwarden_env.py
+
+      - name: Create and upload backup
+        uses: ./.vbase-github-actions/.github/actions/repo-backup
+        with:
+          python-version: ${{ inputs.python-version }}
+          backup-prefix: ${{ inputs.backup-prefix }}
+          bundle-name: ${{ inputs.bundle-name }}
+          object-storage-access-key-id: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_ACCESS_KEY_ID }}
+          object-storage-secret-access-key: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
+          object-storage-bucket-name: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_BUCKET_NAME }}
+          object-storage-endpoint-url: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_ENDPOINT_URL }}
+          object-storage-region: ${{ steps.object-storage-credentials.outputs.OBJECT_STORAGE_REGION }}

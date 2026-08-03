@@ -6,6 +6,7 @@ full CI/CD processes.
 Reusable workflow roadmap:
 - `publish-docs.yml` (implemented)
 - `python-lint.yml` (implemented)
+- `repo-backup.yml` (implemented)
 - `python-ci.yml`
 - `e2e-tests.yml`
 - `coverage.yml`
@@ -95,3 +96,8 @@ Known local workflow variants:
 - C# docs require MSBuild plus a repository-local markdown patch script;
 - `vbase-django-tools` generates OpenAPI markdown on Windows before publishing;
 - some sample repositories publish existing `docs/` without a build step.
+
+## repo-backup.yml
+
+The production repository backup workflow contract is canonical in
+`internal/specs/repo-backup.md#reusable-workflow-contract`.

@@ -150,3 +150,8 @@ Source TypeScript and package files are kept with the action for maintenance,
 but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
 dependencies, rebuild and commit the bundled `index.js`.
+
+## repo-backup
+
+The low-level composite action contract is canonical in
+`internal/specs/repo-backup.md#composite-action-contract`.
