@@ -26,6 +26,7 @@ class ObjectStorageUploader:
         self.bucket_name = bucket_name
         self.endpoint_url = self._validate_endpoint_url(endpoint_url)
         self.region = region
+        self._checksum_algorithm_supported = False
 
         if not bucket_name or "/" in bucket_name:
             raise ValueError("OBJECT_STORAGE_BUCKET_NAME must be a bucket name.")
@@ -40,6 +41,7 @@ class ObjectStorageUploader:
             raise ValueError(f"Backup artifact does not exist: {local_path}")
 
         self._ensure_aws_cli()
+        self._ensure_checksum_algorithm_support()
 
         target = f"s3://{self.bucket_name}/{remote_name}"
         print(
@@ -86,6 +88,25 @@ class ObjectStorageUploader:
             "AWS CLI is required for S3-compatible backup uploads. "
             "GitHub-hosted ubuntu runners include it; self-hosted runners must "
             "install it before using repo-backup."
+        )
+
+    def _ensure_checksum_algorithm_support(self) -> None:
+        if self._checksum_algorithm_supported:
+            return
+        completed = subprocess.run(
+            ["aws", "s3", "cp", "help"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        if "--checksum-algorithm" in completed.stdout:
+            self._checksum_algorithm_supported = True
+            return
+        raise RuntimeError(
+            "AWS CLI with `aws s3 cp --checksum-algorithm` support is required "
+            "for repo-backup uploads to object-lock buckets. Upgrade AWS CLI v2 "
+            "on this runner."
         )
 
     def _run_aws(self, *args: str) -> None:
