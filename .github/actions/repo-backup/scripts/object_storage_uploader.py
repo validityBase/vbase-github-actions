@@ -55,6 +55,8 @@ class ObjectStorageUploader:
             self.endpoint_url,
             "--region",
             self.region,
+            "--checksum-algorithm",
+            "SHA256",
             "--only-show-errors",
         )
 
