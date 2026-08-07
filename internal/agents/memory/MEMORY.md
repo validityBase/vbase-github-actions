@@ -39,3 +39,5 @@ Actions and reusable workflows.
 - `.github/workflows/publish-docs.yml`
 - `.github/workflows/python-lint.yml`
 - `.github/workflows/repo-backup.yml`
+- `.github/workflows/daily-repo-backup.yml` backs up this shared-actions
+  repository by calling the reviewed `repo-backup.yml@v1` release line.
