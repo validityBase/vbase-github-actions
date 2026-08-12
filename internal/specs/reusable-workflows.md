@@ -101,3 +101,5 @@ Known local workflow variants:
 
 The production repository backup workflow contract is canonical in
 `internal/specs/repo-backup.md#reusable-workflow-contract`.
+This repository's scheduled/manual self-backup caller is
+`.github/workflows/daily-repo-backup.yml`.

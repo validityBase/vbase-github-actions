@@ -14,6 +14,16 @@ Use `.github/actions/repo-backup/action.yml` directly only when the caller
 workflow needs to own checkout, credential resolution, or additional
 orchestration.
 
+## Shared Actions Repository Backup
+
+This repository backs itself up through `.github/workflows/daily-repo-backup.yml`.
+That workflow is only the scheduled/manual caller; the reusable workflow
+contract remains in `.github/workflows/repo-backup.yml`.
+
+The caller uses the reviewed `@v1` release line for the same reason consumer
+repositories do: centrally reviewed fixes should roll forward without
+per-repository pin updates.
+
 ## Layering
 
 The reusable workflow and the composite action intentionally have different
