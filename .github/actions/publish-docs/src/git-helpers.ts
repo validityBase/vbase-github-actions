@@ -7,6 +7,8 @@ const docsRepository = core.getInput('target-repository');
 const env = process.env as any;
 const maxPushAttempts = 3;
 
+type RemoteBranchState = 'advanced' | 'already-pushed' | 'unchanged';
+
 let targetBranch = core.getInput('target-repository-branch') as string;
             if(!targetBranch) {
                 console.log('No target-repository-branch provided. We will use the current product branch name.');
@@ -55,10 +57,51 @@ async function pushDocsRepository(): Promise<void> {
                 throw error;
             }
 
-            console.log(`Push attempt ${attempt} failed. Fetching and rebasing the latest ${targetBranch} before retrying...`);
-            await run("git", ["fetch", "origin", targetBranch], Constants.MainDocsDirectory);
+            const remoteBranchState = await getRemoteBranchState(targetBranch, error);
+            if(remoteBranchState === 'already-pushed') {
+                console.log(`The push may have succeeded before the connection was closed. ${targetBranch} already contains the local commit.`);
+                return;
+            }
+
+            if(remoteBranchState === 'unchanged') {
+                throw error;
+            }
+
+            console.log(`Push attempt ${attempt} found new commits on ${targetBranch}. Rebasing before retrying...`);
             await run("git", ["rebase", `origin/${targetBranch}`], Constants.MainDocsDirectory);
         }
+    }
+}
+
+async function getRemoteBranchState(targetBranch: string, pushError: unknown): Promise<RemoteBranchState> {
+    try {
+        await run("git", ["fetch", "origin", targetBranch], Constants.MainDocsDirectory);
+        const revisionCounts = (await run(
+            "git",
+            ["rev-list", "--left-right", "--count", `HEAD...origin/${targetBranch}`],
+            Constants.MainDocsDirectory))
+            .trim()
+            .split(/\s+/)
+            .map(Number);
+
+        if(revisionCounts.length !== 2 || revisionCounts.some(Number.isNaN)) {
+            throw new Error(`Unexpected revision count output: ${revisionCounts.join(' ')}`);
+        }
+
+        const [localOnlyCommits, remoteOnlyCommits] = revisionCounts;
+        if(remoteOnlyCommits > 0) {
+            return 'advanced';
+        }
+
+        if(localOnlyCommits === 0) {
+            return 'already-pushed';
+        }
+
+        return 'unchanged';
+    }
+    catch {
+        console.log('Unable to inspect the remote branch after the push failed. Re-throwing the original push error.');
+        throw pushError;
     }
 }
 

@@ -151,7 +151,9 @@ but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
 dependencies, rebuild and commit the bundled `index.js`. The action must
 handle concurrent publishers by fetching and rebasing the target branch before
-retrying a rejected push, with a bounded number of attempts.
+retrying a rejected push only when the remote branch has advanced, with a
+bounded number of attempts. If the remote already contains the local commit,
+the publish is considered successful.
 
 ## repo-backup
 

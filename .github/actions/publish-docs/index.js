@@ -31711,10 +31711,43 @@ function pushDocsRepository() {
                 if (attempt === maxPushAttempts) {
                     throw error;
                 }
-                console.log(`Push attempt ${attempt} failed. Fetching and rebasing the latest ${targetBranch} before retrying...`);
-                yield (0, process_helpers_1.run)("git", ["fetch", "origin", targetBranch], constants_1.Constants.MainDocsDirectory);
+                const remoteBranchState = yield getRemoteBranchState(targetBranch, error);
+                if (remoteBranchState === 'already-pushed') {
+                    console.log(`The push may have succeeded before the connection was closed. ${targetBranch} already contains the local commit.`);
+                    return;
+                }
+                if (remoteBranchState === 'unchanged') {
+                    throw error;
+                }
+                console.log(`Push attempt ${attempt} found new commits on ${targetBranch}. Rebasing before retrying...`);
                 yield (0, process_helpers_1.run)("git", ["rebase", `origin/${targetBranch}`], constants_1.Constants.MainDocsDirectory);
             }
+        }
+    });
+}
+function getRemoteBranchState(targetBranch, pushError) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield (0, process_helpers_1.run)("git", ["fetch", "origin", targetBranch], constants_1.Constants.MainDocsDirectory);
+            const revisionCounts = (yield (0, process_helpers_1.run)("git", ["rev-list", "--left-right", "--count", `HEAD...origin/${targetBranch}`], constants_1.Constants.MainDocsDirectory))
+                .trim()
+                .split(/\s+/)
+                .map(Number);
+            if (revisionCounts.length !== 2 || revisionCounts.some(Number.isNaN)) {
+                throw new Error(`Unexpected revision count output: ${revisionCounts.join(' ')}`);
+            }
+            const [localOnlyCommits, remoteOnlyCommits] = revisionCounts;
+            if (remoteOnlyCommits > 0) {
+                return 'advanced';
+            }
+            if (localOnlyCommits === 0) {
+                return 'already-pushed';
+            }
+            return 'unchanged';
+        }
+        catch (_a) {
+            console.log('Unable to inspect the remote branch after the push failed. Re-throwing the original push error.');
+            throw pushError;
         }
     });
 }
