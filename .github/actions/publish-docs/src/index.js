@@ -73,4 +73,7 @@ console.log('Publishing user documentation to the central docs repository...');
 })
     .then(() => {
     console.log('Publishing user documentation is done.');
+})
+    .catch((error) => {
+    core.setFailed(error instanceof Error ? error.message : String(error));
 });

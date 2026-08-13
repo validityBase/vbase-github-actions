@@ -31663,6 +31663,7 @@ const constants_1 = __nccwpck_require__(9097);
 const docsRepoAccessToken = core.getInput('docs-repo-access-token');
 const docsRepository = core.getInput('target-repository');
 const env = process.env;
+const maxPushAttempts = 3;
 let targetBranch = core.getInput('target-repository-branch');
 if (!targetBranch) {
     console.log('No target-repository-branch provided. We will use the current product branch name.');
@@ -31692,12 +31693,64 @@ function commitAndPushDocsRepository(productDocsSubDirectory) {
             console.log('Committing the changes to the docs repository...');
             var currentRepo = env.GITHUB_REPOSITORY.split('/')[1];
             yield (0, process_helpers_1.run)("git", ["commit", "-m", `Update ${currentRepo} documentation from automated build`], constants_1.Constants.MainDocsDirectory);
-            yield (0, process_helpers_1.run)("git", ["push", `https://${docsRepoAccessToken}@github.com/${docsRepository}.git`, getTargetBranch()], constants_1.Constants.MainDocsDirectory);
+            yield pushDocsRepository();
             console.log('Committing the changes to the docs repository done.');
         }));
     });
 }
 exports.commitAndPushDocsRepository = commitAndPushDocsRepository;
+function pushDocsRepository() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const targetBranch = getTargetBranch();
+        for (let attempt = 1; attempt <= maxPushAttempts; attempt++) {
+            try {
+                yield (0, process_helpers_1.run)("git", ["push", "origin", targetBranch], constants_1.Constants.MainDocsDirectory);
+                return;
+            }
+            catch (error) {
+                if (attempt === maxPushAttempts) {
+                    throw error;
+                }
+                const remoteBranchState = yield getRemoteBranchState(targetBranch, error);
+                if (remoteBranchState === 'already-pushed') {
+                    console.log(`The push may have succeeded before the connection was closed. ${targetBranch} already contains the local commit.`);
+                    return;
+                }
+                if (remoteBranchState === 'unchanged') {
+                    throw error;
+                }
+                console.log(`Push attempt ${attempt} found new commits on ${targetBranch}. Rebasing before retrying...`);
+                yield (0, process_helpers_1.run)("git", ["rebase", `origin/${targetBranch}`], constants_1.Constants.MainDocsDirectory);
+            }
+        }
+    });
+}
+function getRemoteBranchState(targetBranch, pushError) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield (0, process_helpers_1.run)("git", ["fetch", "origin", targetBranch], constants_1.Constants.MainDocsDirectory);
+            const revisionCounts = (yield (0, process_helpers_1.run)("git", ["rev-list", "--left-right", "--count", `HEAD...origin/${targetBranch}`], constants_1.Constants.MainDocsDirectory))
+                .trim()
+                .split(/\s+/)
+                .map(Number);
+            if (revisionCounts.length !== 2 || revisionCounts.some(Number.isNaN)) {
+                throw new Error(`Unexpected revision count output: ${revisionCounts.join(' ')}`);
+            }
+            const [localOnlyCommits, remoteOnlyCommits] = revisionCounts;
+            if (remoteOnlyCommits > 0) {
+                return 'advanced';
+            }
+            if (localOnlyCommits === 0) {
+                return 'already-pushed';
+            }
+            return 'unchanged';
+        }
+        catch (_a) {
+            console.log('Unable to inspect the remote branch after the push failed. Re-throwing the original push error.');
+            throw pushError;
+        }
+    });
+}
 function getTargetBranch() {
     let targetBranch = core.getInput('target-repository-branch');
     if (!targetBranch) {
@@ -31789,6 +31842,9 @@ console.log('Publishing user documentation to the central docs repository...');
 })
     .then(() => {
     console.log('Publishing user documentation is done.');
+})
+    .catch((error) => {
+    core.setFailed(error instanceof Error ? error.message : String(error));
 });
 
 

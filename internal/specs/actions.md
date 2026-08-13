@@ -149,7 +149,11 @@ The action is a Node 24 action and runs the checked-in bundled `index.js`.
 Source TypeScript and package files are kept with the action for maintenance,
 but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
-dependencies, rebuild and commit the bundled `index.js`.
+dependencies, rebuild and commit the bundled `index.js`. The action must
+handle concurrent publishers by fetching and rebasing the target branch before
+retrying a rejected push only when the remote branch has advanced, with a
+bounded number of attempts. If the remote already contains the local commit,
+the publish is considered successful.
 
 ## repo-backup
 
