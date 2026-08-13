@@ -66,7 +66,9 @@ Optional inputs:
 The action copies Markdown files into the target docs repository. It can
 preprocess PlantUML blocks into image links and can rewrite selected absolute
 GitHub repository links into relative links that work inside the central docs
-site.
+site. If another publisher updates the target branch during the operation, the
+action fetches and rebases the latest target branch before retrying the push,
+up to three push attempts.
 
 ## Maintenance
 

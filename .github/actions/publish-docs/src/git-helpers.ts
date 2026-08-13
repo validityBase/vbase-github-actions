@@ -5,6 +5,7 @@ import { Constants } from './constants';
 const docsRepoAccessToken = core.getInput('docs-repo-access-token');
 const docsRepository = core.getInput('target-repository');
 const env = process.env as any;
+const maxPushAttempts = 3;
 
 let targetBranch = core.getInput('target-repository-branch') as string;
             if(!targetBranch) {
@@ -35,10 +36,30 @@ export async function commitAndPushDocsRepository(productDocsSubDirectory: strin
 
             var currentRepo = env.GITHUB_REPOSITORY.split('/')[1];
             await run("git", ["commit", "-m", `Update ${currentRepo} documentation from automated build`], Constants.MainDocsDirectory);
-            await run("git", ["push", `https://${docsRepoAccessToken}@github.com/${docsRepository}.git`, getTargetBranch()], Constants.MainDocsDirectory);
+            await pushDocsRepository();
 
             console.log('Committing the changes to the docs repository done.');
         });
+}
+
+async function pushDocsRepository(): Promise<void> {
+    const targetBranch = getTargetBranch();
+
+    for(let attempt = 1; attempt <= maxPushAttempts; attempt++) {
+        try {
+            await run("git", ["push", "origin", targetBranch], Constants.MainDocsDirectory);
+            return;
+        }
+        catch(error) {
+            if(attempt === maxPushAttempts) {
+                throw error;
+            }
+
+            console.log(`Push attempt ${attempt} failed. Fetching and rebasing the latest ${targetBranch} before retrying...`);
+            await run("git", ["fetch", "origin", targetBranch], Constants.MainDocsDirectory);
+            await run("git", ["rebase", `origin/${targetBranch}`], Constants.MainDocsDirectory);
+        }
+    }
 }
 
 function getTargetBranch(): string {
