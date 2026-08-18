@@ -76,11 +76,11 @@ runs:
 
         IFS=$' \t\r\n' read -r -d '' -a requirements_files < <(printf '%s\0' "$REQUIREMENTS_FILES")
 
-        pip_install_args=()
-        if [ "$REQUIRE_HASHES" = "true" ]; then
-          pip_install_args+=(--require-hashes)
-        fi
-
         for requirements_file in "${requirements_files[@]}"; do
-          python -m pip install "${pip_install_args[@]}" -r "$requirements_file"
+          # Bash 3.2 on macOS treats an empty array expansion as unbound with nounset.
+          if [ "$REQUIRE_HASHES" = "true" ]; then
+            python -m pip install --require-hashes -r "$requirements_file"
+          else
+            python -m pip install -r "$requirements_file"
+          fi
         done
