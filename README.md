@@ -49,10 +49,9 @@ See `internal/specs/python-dependency-hashes.md` for the migration pattern.
 
 ### run-with-bitwarden-env
 
-Loads one Bitwarden project through the already installed `bw-sm` package and
-runs a command with those values in process environment. The action masks the
-Bitwarden access token; masking loaded project secret values is delegated to
-`bw_sm.env`.
+Loads Bitwarden project values through the already installed `bw-sm` package
+and runs a command. It supports direct process environment loading for one
+project and temporary dotenv files for one or more projects.
 
 ```yaml
 - name: Run E2E tests with Bitwarden env
@@ -68,6 +67,8 @@ Use `project-id` instead of `project` when the workflow should avoid resolving
 by name. Install `bw-sm` and `bitwarden-sdk` through normal locked/private
 Python requirements before this action. The action keeps Bitwarden secrets
 scoped to the command step instead of exporting them to later workflow steps.
+See [the shared actions spec](internal/specs/actions.md#run-with-bitwarden-env)
+for the canonical multi-project env-file interface and example.
 
 ### setup-node-deps
 

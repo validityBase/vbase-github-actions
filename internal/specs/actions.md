@@ -27,32 +27,76 @@ own.
 
 ## run-with-bitwarden-env
 
-Runs one caller-provided bash command with the selected Bitwarden project
-loaded into that process environment through `python -m bw_sm.env` from the
-already installed `bw-sm` package.
+Runs one caller-provided bash command with Bitwarden values supplied by the
+already installed `bw-sm` package. The action supports two mutually exclusive
+modes:
 
-Required inputs:
+- Single-project mode loads one project's values directly into the command
+  process environment.
+- Env-file mode loads one or more projects into private temporary dotenv files,
+  exposes each path through a caller-selected environment variable, runs the
+  command, and removes all temporary files afterward.
+
+Inputs required in both modes:
+
 - `command`: bash command to execute.
+- `working-directory`: defaults to `.` and must identify an existing directory.
+
+Single-project mode inputs:
+
 - `bitwarden-access-token`: project-scoped Bitwarden machine access token.
-
-Project selector inputs:
-- `project`: Bitwarden project name.
-- `project-id`: Bitwarden project id.
-
-At least one project selector is required.
-
-Optional inputs:
-- `org-id`: defaults to the vBase Bitwarden organization id.
+- At least one of `project` or `project-id` must identify the project; callers
+  should normally provide only one selector.
 - `token-env`: defaults to `BWS_ACCESS_TOKEN`.
+
+Env-file mode input:
+
+- `projects-json`: a non-empty JSON array. Each object requires exactly one of
+  `project` or `project-id`, plus `token-env` and `env-file-variable`.
+- `token-env` names an environment variable supplied by the caller that holds
+  that project's machine access token. Tokens are referenced by name and must
+  not be embedded in `projects-json`.
+- `env-file-variable` names the environment variable through which the caller
+  command receives the generated dotenv file path. Values must be unique.
+- Each object may override `org-id` and `backend` for its project.
+
+Shared optional inputs:
+
+- `org-id`: defaults to the vBase Bitwarden organization id.
 - `backend`: defaults to `api`.
-- `working-directory`: defaults to `.`.
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The
-action must not export Bitwarden secrets through `$GITHUB_ENV`; secrets stay
-scoped to the command process. The composite action must mask the Bitwarden
-access token; `bw_sm.env` is responsible for masking loaded secret values before
-running the caller command.
+action must not export Bitwarden secrets or generated paths through
+`$GITHUB_ENV`; they stay scoped to the command process. Generated files must be
+private and must be removed whether the command succeeds or fails. The
+composite action masks Bitwarden access tokens and removes env-file mode tokens
+from the caller command environment; `bw_sm.env` masks loaded secret values.
+
+Example env-file mode configuration:
+
+```yaml
+- name: Run Docker Compose with Bitwarden env files
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  env:
+    APP_DOCKER_TOKEN: ${{ secrets.APP_DOCKER_TOKEN }}
+    API_DOCKER_TOKEN: ${{ secrets.API_DOCKER_TOKEN }}
+  with:
+    projects-json: >-
+      [
+        {
+          "project": "app-docker",
+          "token-env": "APP_DOCKER_TOKEN",
+          "env-file-variable": "APP_DOCKER_ENV_FILE"
+        },
+        {
+          "project": "api-docker",
+          "token-env": "API_DOCKER_TOKEN",
+          "env-file-variable": "API_DOCKER_ENV_FILE"
+        }
+      ]
+    command: docker compose up --abort-on-container-exit
+```
 
 ## setup-node-deps
 
