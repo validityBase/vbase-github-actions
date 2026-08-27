@@ -1,6 +1,7 @@
 name: Run with Bitwarden env
 description: >
-  Run a command with Bitwarden project secrets.
+  Run a command with Bitwarden project secrets in its environment or in
+  temporary dotenv files.
 # cspell:ignore btenv pipefail
 
 inputs:
@@ -9,7 +10,8 @@ inputs:
     required: true
   bitwarden-access-token:
     description: Bitwarden machine access token for the selected project.
-    required: true
+    required: false
+    default: ""
   project:
     description: Bitwarden project name.
     required: false
@@ -31,6 +33,14 @@ inputs:
     description: Bitwarden backend passed to bw_sm.env.
     required: false
     default: api
+  projects-json:
+    description: >
+      JSON array describing Bitwarden projects to write to temporary dotenv
+      files. Each entry requires project or project-id, token-env, and
+      env-file-variable. This mode cannot be combined with the single-project
+      inputs.
+    required: false
+    default: ""
   working-directory:
     description: Directory where the command should run.
     required: false
@@ -48,6 +58,7 @@ runs:
         BTENV_TOKEN_ENV: ${{ inputs.token-env }}
         BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
         BTENV_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        BTENV_PROJECTS_JSON: ${{ inputs.projects-json }}
       run: |
         set -euo pipefail
 
@@ -66,22 +77,30 @@ runs:
           exit 1
         fi
 
-        if [ -z "$BTENV_PROJECT" ] && [ -z "$BTENV_PROJECT_ID" ]; then
-          echo "project or project-id input must be provided" >&2
-          exit 1
-        fi
+        if [ -n "$BTENV_PROJECTS_JSON" ]; then
+          if [ -n "$BTENV_PROJECT" ] || [ -n "$BTENV_PROJECT_ID" ] || [ -n "$BTENV_ACCESS_TOKEN" ]; then
+            echo "projects-json cannot be combined with project, project-id, or bitwarden-access-token" >&2
+            exit 1
+          fi
+        else
+          if [ -z "$BTENV_PROJECT" ] && [ -z "$BTENV_PROJECT_ID" ]; then
+            echo "project or project-id input must be provided" >&2
+            exit 1
+          fi
 
-        if [[ ! "$BTENV_TOKEN_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-          echo "token-env must be a valid shell environment variable name" >&2
-          exit 1
-        fi
+          if [[ ! "$BTENV_TOKEN_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            echo "token-env must be a valid shell environment variable name" >&2
+            exit 1
+          fi
 
-        if [ -z "$BTENV_ACCESS_TOKEN" ]; then
-          echo "bitwarden-access-token input must not be empty" >&2
-          exit 1
+          if [ -z "$BTENV_ACCESS_TOKEN" ]; then
+            echo "bitwarden-access-token input must not be empty" >&2
+            exit 1
+          fi
         fi
 
     - name: Run command with Bitwarden env
+      if: ${{ inputs.projects-json == '' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
@@ -110,3 +129,17 @@ runs:
         fi
 
         python -m bw_sm.env "${btenv_args[@]}" -- bash -euo pipefail -c "$BTENV_COMMAND"
+
+    - name: Run command with Bitwarden env files
+      if: ${{ inputs.projects-json != '' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BTENV_ACTION_PATH: ${{ github.action_path }}
+        BTENV_COMMAND: ${{ inputs.command }}
+        BTENV_ORG_ID: ${{ inputs.org-id }}
+        BTENV_BACKEND: ${{ inputs.backend }}
+        BTENV_PROJECTS_JSON: ${{ inputs.projects-json }}
+      run: |
+        set -euo pipefail
+        python "$BTENV_ACTION_PATH/scripts/run_with_env_files.py"
