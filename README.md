@@ -209,8 +209,9 @@ to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 ### repo-backup action
 
 Low-level composite action for callers that already checkout the repository and
-resolve object storage credentials themselves. Prefer the reusable
-`repo-backup.yml` workflow for production backups.
+need to own backup orchestration. Prefer the reusable `repo-backup.yml` workflow
+for production backups. The action supports direct object-storage inputs and a
+Bitwarden-backed mode; the reusable workflow uses the Bitwarden mode.
 
 ```yaml
 - name: Create and upload repo backup
@@ -316,8 +317,8 @@ and `cmd`.
 ### repo-backup reusable workflow
 
 Reusable workflow for daily or manual production repository backups. The caller
-repository owns the schedule; this workflow resolves Bitwarden credentials and
-invokes the shared `repo-backup` action.
+repository owns the schedule; this workflow invokes the shared `repo-backup`
+action in Bitwarden mode.
 
 ```yaml
 name: Daily repo backup
