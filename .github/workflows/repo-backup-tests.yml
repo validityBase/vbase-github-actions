@@ -1,0 +1,38 @@
+name: Repo backup tests
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/repo-backup/**"
+      - ".github/workflows/repo-backup.yml"
+      - ".github/workflows/repo-backup-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/actions/repo-backup/**"
+      - ".github/workflows/repo-backup.yml"
+      - ".github/workflows/repo-backup-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Repo backup unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # actions/setup-python v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Run unit tests
+        run: >-
+          python -m unittest discover
+          -s .github/actions/repo-backup/scripts
+          -p 'test_*.py'
+          -v
