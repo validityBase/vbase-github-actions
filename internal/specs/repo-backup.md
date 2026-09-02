@@ -11,8 +11,7 @@ caller repository owns scheduling, for example daily cron plus
 `workflow_dispatch`, and calls this reusable workflow.
 
 Use `.github/actions/repo-backup/action.yml` directly only when the caller
-workflow needs to own checkout, credential resolution, or additional
-orchestration.
+workflow needs to own checkout or additional orchestration.
 
 ## Shared Actions Repository Backup
 
@@ -34,13 +33,13 @@ responsibilities.
 - checks out the caller repository with full history;
 - checks out `validityBase/vbase-github-actions` at the reusable workflow ref
   into `.vbase-github-actions`;
-- installs `vbase-common` and the Bitwarden SDK;
-- resolves object storage credentials from the configured Bitwarden project;
-- invokes the shared `repo-backup` composite action with the resolved
-  credentials.
+- invokes the shared `repo-backup` composite action in Bitwarden mode.
 
 `.github/actions/repo-backup/action.yml` is the implementation layer:
 
+- accepts either a Bitwarden project or direct object storage credentials;
+- uses the canonical `vbase-common` `bw_sm.env` CLI in Bitwarden mode, keeping
+  resolved secrets scoped to the backup process;
 - expects the caller repository to already be checked out;
 - fetches all branch and tag refs;
 - creates a full-history git bundle;
@@ -51,9 +50,9 @@ responsibilities.
 - uploads the bundle, checksum, and metadata with AWS CLI against the configured
   S3-compatible endpoint.
 
-This keeps Bitwarden and workflow orchestration in the reusable workflow while
-keeping backup generation and upload behavior in one shared action
-implementation.
+This keeps credential loading, backup generation, and upload behavior in one
+shared action implementation while the reusable workflow owns only checkout
+and caller-facing orchestration.
 
 ## Backup Object Layout
 
@@ -67,7 +66,13 @@ The object set contains the git bundle, checksum, and metadata.
 
 ## Composite Action Contract
 
-Required inputs:
+Choose exactly one credential mode:
+
+- Bitwarden mode requires `bitwarden-access-token`, `bitwarden-project`, and
+  `vbase-common-repo-read-token`.
+- Direct mode requires all five `object-storage-*` inputs.
+
+Direct credential inputs:
 
 - `object-storage-access-key-id`
 - `object-storage-secret-access-key`
@@ -80,12 +85,13 @@ Optional inputs:
 - `python-version`: defaults to `3.12`.
 - `backup-prefix`: defaults to `github-backups`.
 - `bundle-name`: defaults to `repo.bundle`.
+- `vbase-common-ref`: defaults to `v0.1.2` in Bitwarden mode.
+- `bitwarden-org-id`: defaults to the vBase Bitwarden organization id.
 
-The action is secret-source agnostic. Object storage credential values must be
-resolved before this action runs and passed through `object-storage-*` inputs at
-runtime. The action must never log secret values. Self-hosted runners must
-provide AWS CLI. The action does not back up Git LFS objects or submodule
-repositories.
+The action must never log secret values. Bitwarden project values are available
+only to the child backup process and are not exported through `GITHUB_ENV` or
+step outputs. Self-hosted runners must provide AWS CLI. The action does not back
+up Git LFS objects or submodule repositories.
 
 ## Reusable Workflow Contract
 
@@ -100,11 +106,11 @@ Important inputs:
 - `bundle-name` defaults to `repo.bundle`.
 - `bitwarden-project` defaults to `vbase-repo-backups`.
 - `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
-- `vbase-common-ref` defaults to `v0.1.1`.
+- `vbase-common-ref` defaults to `v0.1.2`.
 - `python-version` defaults to `3.12`.
 - `runner` defaults to `ubuntu-latest`.
 
-Object storage credentials are read from the configured Bitwarden project and
-exposed only to later workflow steps through masked GitHub Actions environment
-values. Bucket lifecycle rules, credential provisioning, and quarterly restore
-tests are separate operational tasks outside this reusable workflow.
+Object storage credentials are read from the configured Bitwarden project only
+inside the shared action's backup process. Bucket lifecycle rules, credential
+provisioning, and quarterly restore tests are separate operational tasks
+outside this reusable workflow.

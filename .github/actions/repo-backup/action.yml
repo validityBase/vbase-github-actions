@@ -20,25 +20,55 @@ inputs:
     required: false
     default: repo.bundle
 
+  vbase-common-repo-read-token:
+    description: Token used to install the private vbase-common Bitwarden helper.
+    required: false
+    default: ""
+
+  vbase-common-ref:
+    description: Git ref of validityBase/vbase-common containing bw_sm.env.
+    required: false
+    default: v0.1.2
+
+  bitwarden-access-token:
+    description: Bitwarden machine access token for the backup secrets project.
+    required: false
+    default: ""
+
+  bitwarden-project:
+    description: Bitwarden project containing object storage backup credentials.
+    required: false
+    default: ""
+
+  bitwarden-org-id:
+    description: Bitwarden organization id for the backup secrets project.
+    required: false
+    default: f8c92883-7bb9-4d29-a2d4-b137014f77af
+
   object-storage-access-key-id:
     description: Object storage access key ID.
-    required: true
+    required: false
+    default: ""
 
   object-storage-secret-access-key:
     description: Object storage secret access key.
-    required: true
+    required: false
+    default: ""
 
   object-storage-bucket-name:
     description: Object storage bucket name.
-    required: true
+    required: false
+    default: ""
 
   object-storage-endpoint-url:
     description: S3-compatible object storage endpoint URL.
-    required: true
+    required: false
+    default: ""
 
   object-storage-region:
     description: Object storage signing region.
-    required: true
+    required: false
+    default: ""
 
 outputs:
   remote-prefix:
@@ -62,6 +92,15 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    - name: Install Bitwarden helper dependencies
+      if: ${{ inputs.bitwarden-access-token != '' }}
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        VBASE_COMMON_REPO_READ_TOKEN: ${{ inputs.vbase-common-repo-read-token }}
+        VBASE_COMMON_REF: ${{ inputs.vbase-common-ref }}
+      run: python scripts/install_bitwarden_deps.py
+
     - name: Check AWS CLI
       shell: bash
       run: aws --version
@@ -73,9 +112,12 @@ runs:
       env:
         BACKUP_PREFIX: ${{ inputs.backup-prefix }}
         BUNDLE_NAME: ${{ inputs.bundle-name }}
+        REPO_BACKUP_BITWARDEN_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
+        REPO_BACKUP_BITWARDEN_PROJECT: ${{ inputs.bitwarden-project }}
+        REPO_BACKUP_BITWARDEN_ORG_ID: ${{ inputs.bitwarden-org-id }}
         OBJECT_STORAGE_ACCESS_KEY_ID: ${{ inputs.object-storage-access-key-id }}
         OBJECT_STORAGE_SECRET_ACCESS_KEY: ${{ inputs.object-storage-secret-access-key }}
         OBJECT_STORAGE_BUCKET_NAME: ${{ inputs.object-storage-bucket-name }}
         OBJECT_STORAGE_ENDPOINT_URL: ${{ inputs.object-storage-endpoint-url }}
         OBJECT_STORAGE_REGION: ${{ inputs.object-storage-region }}
-      run: python -m scripts.main
+      run: python -m scripts.run_backup
