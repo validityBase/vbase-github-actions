@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
+
+from scoped_output import ScopedMaskFilter, run_with_scoped_masks
 
 ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ALLOWED_PROJECT_KEYS = {
@@ -143,16 +144,11 @@ def parse_projects(
     return projects
 
 
-def add_github_mask(value: str) -> None:
-    """Mask one value without allowing workflow-command injection."""
-    escaped = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-    print(f"::add-mask::{escaped}")
-
-
 def dump_project(
     project: ProjectConfig,
     output_path: Path,
     environ: Mapping[str, str],
+    mask_filter: ScopedMaskFilter,
 ) -> int:
     """Ask the installed bw-sm CLI to write one private dotenv file."""
     command = [
@@ -173,8 +169,12 @@ def dump_project(
         command.extend(("--org-id", project.organization_id))
     command.extend(("--output", str(output_path)))
 
-    result = subprocess.run(command, check=False, env=dict(environ))
-    return result.returncode
+    return run_with_scoped_masks(
+        command,
+        env=environ,
+        initial_masks=[environ[project.token_env]],
+        mask_filter=mask_filter,
+    )
 
 
 def run_with_env_files(
@@ -184,24 +184,25 @@ def run_with_env_files(
     environ: Mapping[str, str],
 ) -> int:
     """Create private dotenv files, run the caller command, and remove the files."""
+    mask_filter = ScopedMaskFilter(
+        [environ[project.token_env] for project in projects]
+    )
     with tempfile.TemporaryDirectory(prefix="vbase-btenv-") as temp_directory:
         child_env = dict(environ)
         for index, project in enumerate(projects):
-            add_github_mask(environ[project.token_env])
             output_path = Path(temp_directory, f"project-{index}.env")
-            return_code = dump_project(project, output_path, environ)
+            return_code = dump_project(project, output_path, environ, mask_filter)
             if return_code:
                 return return_code
             child_env.pop(project.token_env, None)
             child_env[project.env_file_variable] = str(output_path)
 
-        result = subprocess.run(
+        return run_with_scoped_masks(
             ["bash", "-euo", "pipefail", "-c", command],
-            check=False,
             cwd=working_directory,
             env=child_env,
+            mask_filter=mask_filter,
         )
-        return result.returncode
 
 
 def main() -> int:

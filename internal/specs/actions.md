@@ -70,8 +70,14 @@ locked/private Python requirements before using the default `api` backend. The
 action must not export Bitwarden secrets or generated paths through
 `$GITHUB_ENV`; they stay scoped to the command process. Generated files must be
 private and must be removed whether the command succeeds or fails. The
-composite action masks Bitwarden access tokens and removes env-file mode tokens
-from the caller command environment; `bw_sm.env` masks loaded secret values.
+composite action removes env-file mode tokens from the caller command
+environment. It captures the `add-mask` workflow commands emitted by
+`bw_sm.env`, applies those values while streaming only the wrapped command's
+stdout and stderr, and preserves the command's exit code. This command-scoped
+redaction must protect machine tokens and loaded secret values without
+registering job-wide masks that obscure unrelated later steps. In particular,
+short configuration values such as `0` and `1` must not redact numbers from
+later test or coverage summaries.
 
 Example env-file mode configuration:
 
