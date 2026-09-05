@@ -51,7 +51,9 @@ See `internal/specs/python-dependency-hashes.md` for the migration pattern.
 
 Loads Bitwarden project values through the already installed `bw-sm` package
 and runs a command. It supports direct process environment loading for one
-project and temporary dotenv files for one or more projects.
+project and temporary dotenv files for one or more projects. Secret values are
+redacted while that command runs without registering job-wide masks that can
+obscure unrelated output from later workflow steps.
 
 ```yaml
 - name: Run E2E tests with Bitwarden env

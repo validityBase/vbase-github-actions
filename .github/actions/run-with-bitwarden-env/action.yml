@@ -1,7 +1,7 @@
 name: Run with Bitwarden env
 description: >
   Run a command with Bitwarden project secrets in its environment or in
-  temporary dotenv files.
+  temporary dotenv files, with secret redaction scoped to that command.
 # cspell:ignore btenv pipefail
 
 inputs:
@@ -104,6 +104,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        BTENV_ACTION_PATH: ${{ github.action_path }}
         BTENV_COMMAND: ${{ inputs.command }}
         BTENV_PROJECT: ${{ inputs.project }}
         BTENV_PROJECT_ID: ${{ inputs.project-id }}
@@ -113,22 +114,7 @@ runs:
         BTENV_BACKEND: ${{ inputs.backend }}
       run: |
         set -euo pipefail
-
-        echo "::add-mask::${BTENV_ACCESS_TOKEN}"
-        export "${BTENV_TOKEN_ENV}=${BTENV_ACCESS_TOKEN}"
-
-        btenv_args=(run --token-env "$BTENV_TOKEN_ENV" --backend "$BTENV_BACKEND")
-        if [ -n "$BTENV_PROJECT" ]; then
-          btenv_args+=(--project "$BTENV_PROJECT")
-        fi
-        if [ -n "$BTENV_PROJECT_ID" ]; then
-          btenv_args+=(--project-id "$BTENV_PROJECT_ID")
-        fi
-        if [ -n "$BTENV_ORG_ID" ]; then
-          btenv_args+=(--org-id "$BTENV_ORG_ID")
-        fi
-
-        python -m bw_sm.env "${btenv_args[@]}" -- bash -euo pipefail -c "$BTENV_COMMAND"
+        python "$BTENV_ACTION_PATH/scripts/run_with_env.py"
 
     - name: Run command with Bitwarden env files
       if: ${{ inputs.projects-json != '' }}

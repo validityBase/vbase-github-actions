@@ -94,12 +94,12 @@ class ParseProjectsTests(unittest.TestCase):
 class RunWithEnvFilesTests(unittest.TestCase):
     """Verify file-path scoping and cleanup around the caller command."""
 
-    @mock.patch.object(run_with_env_files.subprocess, "run")
+    @mock.patch.object(run_with_env_files, "run_with_scoped_masks")
     def test_dump_project_keeps_access_token_out_of_command_arguments(
         self, run_mock: mock.Mock
     ) -> None:
         """The helper references token env names instead of embedding secrets."""
-        run_mock.return_value.returncode = 0
+        run_mock.return_value = 0
         project = run_with_env_files.ProjectConfig(
             project="app-docker",
             project_id=None,
@@ -113,21 +113,23 @@ class RunWithEnvFilesTests(unittest.TestCase):
             project,
             Path("app.env"),
             {"APP_TOKEN": "sensitive-token"},
+            run_with_env_files.ScopedMaskFilter(),
         )
 
         self.assertEqual(0, return_code)
         command = run_mock.call_args.args[0]
         self.assertIn("APP_TOKEN", command)
         self.assertNotIn("sensitive-token", command)
+        self.assertEqual(
+            ["sensitive-token"], run_mock.call_args.kwargs["initial_masks"]
+        )
 
-    @mock.patch.object(run_with_env_files, "add_github_mask")
     @mock.patch.object(run_with_env_files, "dump_project")
-    @mock.patch.object(run_with_env_files.subprocess, "run")
+    @mock.patch.object(run_with_env_files, "run_with_scoped_masks")
     def test_runs_command_with_env_file_paths_and_removes_them(
         self,
         run_mock: mock.Mock,
         dump_mock: mock.Mock,
-        mask_mock: mock.Mock,
     ) -> None:
         """The child gets paths but not access tokens, and files are temporary."""
 
@@ -135,12 +137,13 @@ class RunWithEnvFilesTests(unittest.TestCase):
             _project: run_with_env_files.ProjectConfig,
             path: Path,
             _environ: dict[str, str],
+            _mask_filter: run_with_env_files.ScopedMaskFilter,
         ) -> int:
             path.write_text('VALUE="secret"\n', encoding="utf-8")
             return 0
 
         dump_mock.side_effect = write_env_file
-        run_mock.return_value.returncode = 0
+        run_mock.return_value = 0
         projects = [
             run_with_env_files.ProjectConfig(
                 project="app-docker",
@@ -166,7 +169,8 @@ class RunWithEnvFilesTests(unittest.TestCase):
         self.assertNotIn("APP_TOKEN", command_env)
         self.assertFalse(env_file.exists())
         run_mock.assert_called_once()
-        mask_mock.assert_called_once_with("app-token")
+        mask_filter = run_mock.call_args.kwargs["mask_filter"]
+        self.assertIs(mask_filter, dump_mock.call_args.args[3])
 
 
 if __name__ == "__main__":
