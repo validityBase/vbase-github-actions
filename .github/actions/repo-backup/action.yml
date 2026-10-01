@@ -28,7 +28,7 @@ inputs:
   vbase-common-ref:
     description: Git ref of validityBase/vbase-common containing bw_sm.env.
     required: false
-    default: v0.1.2
+    default: v0.1.3
 
   bitwarden-access-token:
     description: Bitwarden machine access token for the backup secrets project.
