@@ -85,7 +85,7 @@ Optional inputs:
 - `python-version`: defaults to `3.12`.
 - `backup-prefix`: defaults to `github-backups`.
 - `bundle-name`: defaults to `repo.bundle`.
-- `vbase-common-ref`: defaults to `v0.1.2` in Bitwarden mode.
+- `vbase-common-ref`: defaults to `v0.1.3` in Bitwarden mode.
 - `bitwarden-org-id`: defaults to the vBase Bitwarden organization id.
 
 The action must never log secret values. Bitwarden project values are available
@@ -106,7 +106,7 @@ Important inputs:
 - `bundle-name` defaults to `repo.bundle`.
 - `bitwarden-project` defaults to `vbase-repo-backups`.
 - `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
-- `vbase-common-ref` defaults to `v0.1.2`.
+- `vbase-common-ref` defaults to `v0.1.3`.
 - `python-version` defaults to `3.12`.
 - `runner` defaults to `ubuntu-latest`.
 

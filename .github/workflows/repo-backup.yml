@@ -17,7 +17,7 @@ on:
         description: Git ref of validityBase/vbase-common to install for Bitwarden helpers.
         required: false
         type: string
-        default: v0.1.2
+        default: v0.1.3
       bitwarden-project:
         description: Bitwarden project containing object storage backup credentials.
         required: false
