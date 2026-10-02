@@ -72,6 +72,22 @@ scoped to the command step instead of exporting them to later workflow steps.
 See [the shared actions spec](internal/specs/actions.md#run-with-bitwarden-env)
 for the canonical multi-project env-file interface and example.
 
+To reuse encrypted Bitwarden data across workflow runs, install a `bw_sm.env`
+version with encrypted-cache support, then add these inputs in either mode:
+
+```yaml
+    cache-enabled: "true"
+    cache-ttl-seconds: "3600" # Refresh on the first use after one hour.
+    cache-refresh: "false" # Set true to force a fresh login and secret read.
+```
+
+Caching defaults to disabled and requires Linux or macOS when enabled.
+Cache restore/save failures do not fail the caller command. Only encrypted
+project snapshots and encrypted SDK sessions enter GitHub Actions cache;
+temporary plaintext dotenv files are
+deleted afterward. Eviction causes a fresh fetch. Changes in Bitwarden are
+visible after the configured expiry or a forced refresh.
+
 ### setup-node-deps
 
 Sets up Node.js, restores the npm cache through `actions/setup-node`, validates
