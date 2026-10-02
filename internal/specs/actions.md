@@ -69,6 +69,7 @@ Shared optional inputs:
   Linux/macOS. The installed `bw_sm.env` must support `--cache-enabled`,
   `--cache-dir`, `--cache-ttl-seconds`, and `--cache-refresh`; older installations
   remain supported with caching disabled.
+  Unsupported runners are rejected before cache restore or directory creation.
 - `cache-ttl-seconds`: positive integer, default `3600`. Refresh on the first
   invocation after one hour (or the configured age), not in the background.
 - `cache-refresh`: `true` or `false`, default `false`. With caching enabled,
@@ -91,14 +92,22 @@ Encrypted caching contract:
   key under the same restore prefix. Unchanged hits are not uploaded again.
   Save changes even if the wrapped command fails, preserving its failure.
 - GitHub branch visibility and eviction rules apply; cache availability is
-  best effort. Secret rotation/revocation is observed on refresh, not during a
+  best effort. Restore/save failures must not fail the caller command or change
+  its exit status. Secret rotation/revocation is observed on refresh, not during a
   valid snapshot's TTL. Force refresh for an immediate new login and read.
   Disabling caching skips restore/read/write/save without purging old entries.
+- `BTENV_CACHE_DIR` is removed from the wrapped command environment in both
+  modes; the single-project loader receives the directory through its CLI
+  argument, and env-file loading retains the original configuration.
+  Commands must be trusted: all workflow steps share the runner account and
+  filesystem, so hiding the path does not provide a sandbox.
 
 Validation covers disabled compatibility, TTL and flag validation, scope
 isolation, unique replacement keys, local reuse, encrypted-file selection,
 symlink rejection and forwarding controls to both runner modes in
 `scripts/test_cache_config.py`, alongside the existing cleanup/redaction tests.
+Regression cases also cover unsupported runners and cache-path removal from
+wrapped commands without losing the loader's directory setting.
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The

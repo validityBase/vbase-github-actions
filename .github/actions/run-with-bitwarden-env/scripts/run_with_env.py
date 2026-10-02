@@ -52,6 +52,8 @@ def run_with_env(environ: Mapping[str, str], working_directory: Path) -> int:
     )
     child_env = dict(environ)
     child_env[token_env] = access_token
+    # The loader receives this path through --cache-dir, not the child environment.
+    child_env.pop("BTENV_CACHE_DIR", None)
     return run_with_scoped_masks(
         command,
         cwd=working_directory,

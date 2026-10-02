@@ -13,6 +13,7 @@ from typing import Mapping
 CACHE_PREFIX = "vbase-btenv-v1"
 ENCRYPTED_SUFFIXES = {".enc", ".state"}
 SDK_BACKENDS = {"api", "sdk", "bt-sm-api", "sm-api"}
+SUPPORTED_CACHE_RUNNERS = {"Linux", "macOS"}
 
 
 def cache_options(environ: Mapping[str, str]) -> list[str]:
@@ -40,6 +41,8 @@ def prepare(environ: Mapping[str, str]) -> dict[str, str]:
 
     if not cache_options(environ):
         return {}
+    if environ["RUNNER_OS"] not in SUPPORTED_CACHE_RUNNERS:
+        raise ValueError("Encrypted caching requires a Linux or macOS runner")
     raw_projects = environ.get("BTENV_PROJECTS_JSON")
     if not raw_projects:
         raw_projects = json.dumps(

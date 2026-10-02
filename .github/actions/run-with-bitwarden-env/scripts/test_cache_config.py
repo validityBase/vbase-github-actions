@@ -48,11 +48,21 @@ class CacheConfigTests(unittest.TestCase):
 
     def test_project_org_token_and_runner_isolate_remote_cache(self):
         original = prepare(self.env)["prefix"]
-        for key in ("BTENV_PROJECT", "BTENV_ORG_ID", "BTENV_ACCESS_TOKEN", "RUNNER_OS"):
+        for key in ("BTENV_PROJECT", "BTENV_ORG_ID", "BTENV_ACCESS_TOKEN"):
             with self.subTest(key=key):
                 self.assertNotEqual(
                     prepare({**self.env, key: "different"})["prefix"], original
                 )
+        self.assertNotEqual(
+            prepare({**self.env, "RUNNER_OS": "macOS"})["prefix"], original
+        )
+
+    def test_windows_cache_is_rejected_before_storage_is_created(self):
+        environ = {**self.env, "RUNNER_OS": "Windows"}
+        with self.assertRaisesRegex(ValueError, "Linux or macOS"):
+            prepare(environ)
+        self.assertEqual(prepare({**environ, "BTENV_CACHE_ENABLED": "false"}), {})
+        self.assertEqual(list(Path(self.temp.name).iterdir()), [])
 
     def test_existing_local_ciphertext_skips_restore_and_detects_refresh(self):
         directory = Path(prepare(self.env)["directory"])
@@ -118,6 +128,7 @@ class CacheConfigTests(unittest.TestCase):
             command = run.call_args.args[0]
             start = command.index("--cache-enabled")
             self.assertEqual(command[start : command.index("--")], expected)
+            self.assertNotIn("BTENV_CACHE_DIR", run.call_args.kwargs["env"])
         project = ProjectConfig(
             "project", None, "BTENV_ACCESS_TOKEN", "FILE", "org", "api"
         )

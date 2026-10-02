@@ -191,6 +191,7 @@ def run_with_env_files(
     )
     with tempfile.TemporaryDirectory(prefix="vbase-btenv-") as temp_directory:
         child_env = dict(environ)
+        child_env.pop("BTENV_CACHE_DIR", None)
         for index, project in enumerate(projects):
             output_path = Path(temp_directory, f"project-{index}.env")
             return_code = dump_project(project, output_path, environ, mask_filter)

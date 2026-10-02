@@ -128,6 +128,7 @@ runs:
       run: python "$BTENV_ACTION_PATH/scripts/cache_config.py" prepare
 
     - name: Restore encrypted cache
+      continue-on-error: true
       if: ${{ inputs.cache-enabled == 'true' && steps.cache-config.outputs.restore == 'true' && inputs.cache-refresh != 'true' }}
       uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:
@@ -196,6 +197,7 @@ runs:
       run: python "$BTENV_ACTION_PATH/scripts/cache_config.py" fingerprint
 
     - name: Save refreshed encrypted cache
+      continue-on-error: true
       if: ${{ always() && steps.cache-after.outputs.changed == 'true' }}
       uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
       with:

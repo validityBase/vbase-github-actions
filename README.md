@@ -81,8 +81,10 @@ version with encrypted-cache support, then add these inputs in either mode:
     cache-refresh: "false" # Set true to force a fresh login and secret read.
 ```
 
-Caching defaults to disabled. Only encrypted project snapshots and encrypted
-SDK sessions enter GitHub Actions cache; temporary plaintext dotenv files are
+Caching defaults to disabled and requires Linux or macOS when enabled.
+Cache restore/save failures do not fail the caller command. Only encrypted
+project snapshots and encrypted SDK sessions enter GitHub Actions cache;
+temporary plaintext dotenv files are
 deleted afterward. Eviction causes a fresh fetch. Changes in Bitwarden are
 visible after the configured expiry or a forced refresh.
 
