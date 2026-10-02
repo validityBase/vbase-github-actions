@@ -64,6 +64,41 @@ Shared optional inputs:
 
 - `org-id`: defaults to the vBase Bitwarden organization id.
 - `backend`: defaults to `api`.
+- `cache-enabled`: `true` or `false`, default `false`. Enables encrypted
+  project snapshots and SDK state persistence for the API/SDK backend on
+  Linux/macOS. The installed `bw_sm.env` must support `--cache-enabled`,
+  `--cache-dir`, `--cache-ttl-seconds`, and `--cache-refresh`; older installations
+  remain supported with caching disabled.
+- `cache-ttl-seconds`: positive integer, default `3600`. Refresh on the first
+  invocation after one hour (or the configured age), not in the background.
+- `cache-refresh`: `true` or `false`, default `false`. With caching enabled,
+  bypass remote restore and discard the selected project snapshots and their
+  SDK sessions before loading fresh data.
+
+Encrypted caching contract:
+
+- Restore/save only `*.enc` project snapshots and SDK-encrypted `*.state`
+  files via GitHub Actions cache. Tokens, encryption keys, and temporary dotenv
+  files must never be archived or exported through workflow outputs.
+- Cache prefixes use hashes of the selected machine tokens, organizations and
+  project selectors, plus runner OS and a format version. Multi-project order
+  and output variable names do not affect the scope. Tokens rotating or project
+  scope changes select a separate cache.
+- Reuse existing local ciphertext between steps in the same job. Across runs,
+  restore the most recent matching cache and let `bw_sm.env` authenticate its
+  scope and expiry. Missing/evicted or expired entries fetch fresh values.
+- GitHub caches are immutable: refreshed encrypted contents get a unique save
+  key under the same restore prefix. Unchanged hits are not uploaded again.
+  Save changes even if the wrapped command fails, preserving its failure.
+- GitHub branch visibility and eviction rules apply; cache availability is
+  best effort. Secret rotation/revocation is observed on refresh, not during a
+  valid snapshot's TTL. Force refresh for an immediate new login and read.
+  Disabling caching skips restore/read/write/save without purging old entries.
+
+Validation covers disabled compatibility, TTL and flag validation, scope
+isolation, unique replacement keys, local reuse, encrypted-file selection,
+symlink rejection and forwarding controls to both runner modes in
+`scripts/test_cache_config.py`, alongside the existing cleanup/redaction tests.
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
+from cache_config import cache_options
 from scoped_output import run_with_scoped_masks
 
 
@@ -38,6 +39,7 @@ def run_with_env(environ: Mapping[str, str], working_directory: Path) -> int:
     if organization_id:
         command.extend(("--org-id", organization_id))
 
+    command.extend(cache_options(environ))
     command.extend(
         (
             "--",

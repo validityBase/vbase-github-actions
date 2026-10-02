@@ -45,6 +45,18 @@ inputs:
     description: Directory where the command should run.
     required: false
     default: .
+  cache-enabled:
+    description: Enable encrypted SDK state and project snapshots in GitHub Actions cache (api/sdk only).
+    required: false
+    default: "false"
+  cache-ttl-seconds:
+    description: Refresh project values on the first invocation after this age in seconds.
+    required: false
+    default: "3600"
+  cache-refresh:
+    description: Discard the selected snapshots and SDK sessions before fetching fresh values.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -99,6 +111,41 @@ runs:
           fi
         fi
 
+    - name: Prepare encrypted cache
+      id: cache-config
+      shell: bash
+      env:
+        BTENV_ACTION_PATH: ${{ github.action_path }}
+        BTENV_CACHE_ENABLED: ${{ inputs.cache-enabled }}
+        BTENV_CACHE_TTL_SECONDS: ${{ inputs.cache-ttl-seconds }}
+        BTENV_CACHE_REFRESH: ${{ inputs.cache-refresh }}
+        BTENV_PROJECT: ${{ inputs.project }}
+        BTENV_PROJECT_ID: ${{ inputs.project-id }}
+        BTENV_ORG_ID: ${{ inputs.org-id }}
+        BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
+        BTENV_BACKEND: ${{ inputs.backend }}
+        BTENV_PROJECTS_JSON: ${{ inputs.projects-json }}
+      run: python "$BTENV_ACTION_PATH/scripts/cache_config.py" prepare
+
+    - name: Restore encrypted cache
+      if: ${{ inputs.cache-enabled == 'true' && steps.cache-config.outputs.restore == 'true' && inputs.cache-refresh != 'true' }}
+      uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: |
+          ${{ steps.cache-config.outputs.directory }}/**/*.enc
+          ${{ steps.cache-config.outputs.directory }}/**/*.state
+        key: ${{ steps.cache-config.outputs.key }}
+        restore-keys: ${{ steps.cache-config.outputs.prefix }}
+
+    - name: Inspect restored cache
+      id: cache-before
+      if: ${{ inputs.cache-enabled == 'true' }}
+      shell: bash
+      env:
+        BTENV_ACTION_PATH: ${{ github.action_path }}
+        BTENV_CACHE_DIR: ${{ steps.cache-config.outputs.directory }}
+      run: python "$BTENV_ACTION_PATH/scripts/cache_config.py" fingerprint
+
     - name: Run command with Bitwarden env
       if: ${{ inputs.projects-json == '' }}
       shell: bash
@@ -112,6 +159,10 @@ runs:
         BTENV_TOKEN_ENV: ${{ inputs.token-env }}
         BTENV_ACCESS_TOKEN: ${{ inputs.bitwarden-access-token }}
         BTENV_BACKEND: ${{ inputs.backend }}
+        BTENV_CACHE_ENABLED: ${{ inputs.cache-enabled }}
+        BTENV_CACHE_TTL_SECONDS: ${{ inputs.cache-ttl-seconds }}
+        BTENV_CACHE_REFRESH: ${{ inputs.cache-refresh }}
+        BTENV_CACHE_DIR: ${{ steps.cache-config.outputs.directory }}
       run: |
         set -euo pipefail
         python "$BTENV_ACTION_PATH/scripts/run_with_env.py"
@@ -126,6 +177,29 @@ runs:
         BTENV_ORG_ID: ${{ inputs.org-id }}
         BTENV_BACKEND: ${{ inputs.backend }}
         BTENV_PROJECTS_JSON: ${{ inputs.projects-json }}
+        BTENV_CACHE_ENABLED: ${{ inputs.cache-enabled }}
+        BTENV_CACHE_TTL_SECONDS: ${{ inputs.cache-ttl-seconds }}
+        BTENV_CACHE_REFRESH: ${{ inputs.cache-refresh }}
+        BTENV_CACHE_DIR: ${{ steps.cache-config.outputs.directory }}
       run: |
         set -euo pipefail
         python "$BTENV_ACTION_PATH/scripts/run_with_env_files.py"
+
+    - name: Check for refreshed encrypted cache
+      id: cache-after
+      if: ${{ always() && steps.cache-before.outcome == 'success' }}
+      shell: bash
+      env:
+        BTENV_ACTION_PATH: ${{ github.action_path }}
+        BTENV_CACHE_DIR: ${{ steps.cache-config.outputs.directory }}
+        BTENV_CACHE_BEFORE: ${{ steps.cache-before.outputs.digest }}
+      run: python "$BTENV_ACTION_PATH/scripts/cache_config.py" fingerprint
+
+    - name: Save refreshed encrypted cache
+      if: ${{ always() && steps.cache-after.outputs.changed == 'true' }}
+      uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        path: |
+          ${{ steps.cache-config.outputs.directory }}/**/*.enc
+          ${{ steps.cache-config.outputs.directory }}/**/*.state
+        key: ${{ steps.cache-config.outputs.key }}
