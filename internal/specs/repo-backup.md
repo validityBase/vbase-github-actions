@@ -19,10 +19,10 @@ This repository backs itself up through `.github/workflows/daily-repo-backup.yml
 That workflow is only the scheduled/manual caller; the reusable workflow
 contract remains in `.github/workflows/repo-backup.yml`.
 
-The current caller uses the reviewed `@v1` release line. Monthly full and daily
-incremental artifacts change the restore contract and require a new major
-release ref, `@v2`. Move callers to that ref after it is released and the
-bucket retention policy is verified. The cron schedule stays daily.
+The caller uses the reviewed `@v2` release line. It keeps the daily cron while
+using the monthly-full/daily-differential restore contract described below.
+Before enabling this format, verify the bucket lifecycle and Object Lock
+requirements in [Restore](#restore).
 
 ## Layering
 
