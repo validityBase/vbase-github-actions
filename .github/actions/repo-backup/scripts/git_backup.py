@@ -109,8 +109,8 @@ def snapshot_refs(workspace: Path) -> dict[str, str]:
 
 
 def base_prerequisites(workspace: Path, refs: Mapping[str, str]) -> tuple[str, ...]:
-    """Return base commits, or raise if the current clone lacks a base object."""
-    commits: set[str] = set()
+    """Return base object exclusions, or raise if a base object is missing."""
+    excluded_objects: set[str] = set()
     for oid in set(refs.values()):
         kind = subprocess.run(
             ["git", "cat-file", "-t", oid],
@@ -122,7 +122,7 @@ def base_prerequisites(workspace: Path, refs: Mapping[str, str]) -> tuple[str, .
         if kind.returncode != 0:
             raise ValueError(f"Monthly base object {oid} is not available locally.")
         if kind.stdout.strip() == "commit":
-            commits.add(oid)
+            excluded_objects.add(oid)
         elif kind.stdout.strip() == "tag":
             peeled = subprocess.run(
                 ["git", "rev-parse", "--verify", f"{oid}^{{commit}}"],
@@ -133,10 +133,10 @@ def base_prerequisites(workspace: Path, refs: Mapping[str, str]) -> tuple[str, .
             )
             if peeled.returncode != 0:
                 raise ValueError(f"Monthly base tag {oid} does not point to a commit.")
-            commits.add(peeled.stdout.strip())
-    if not commits:
+            excluded_objects.update((oid, peeled.stdout.strip()))
+    if not excluded_objects:
         raise ValueError("Monthly base has no commit prerequisites.")
-    return tuple(f"^{oid}" for oid in sorted(commits))
+    return tuple(f"^{oid}" for oid in sorted(excluded_objects))
 
 
 def has_new_objects(workspace: Path, prerequisites: tuple[str, ...]) -> bool:

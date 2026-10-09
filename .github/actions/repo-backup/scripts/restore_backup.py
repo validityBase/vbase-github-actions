@@ -64,7 +64,8 @@ def main() -> None:
     if args.output.exists():
         parser.error(f"Output already exists: {args.output}")
     restore_snapshot(
-        Path.cwd(), args.output, args.daily_bundle,
+        Path.cwd(), args.output,
+        args.daily_bundle if args.daily_metadata else args.full_bundle,
         snapshot["refs"], args.full_bundle if args.daily_metadata else None,
         snapshot.get("git_head_ref"),
     )

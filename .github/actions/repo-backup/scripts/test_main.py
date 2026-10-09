@@ -92,7 +92,7 @@ class BackupFlowTests(unittest.TestCase):
                 backup_main.run()
         for path in self.storage.root.rglob("metadata.json"):
             metadata = json.loads(path.read_text(encoding="utf-8"))
-            if metadata["github_run_id"] == run_id:
+            if isinstance(metadata, dict) and metadata.get("github_run_id") == run_id:
                 return metadata
         self.fail(f"Missing metadata for GitHub run {run_id}.")
 
@@ -174,6 +174,42 @@ class BackupFlowTests(unittest.TestCase):
             self.git("rev-parse", "main", cwd=restored),
         )
 
+    def test_full_only_restore(self) -> None:
+        full = self.run_backup("101")
+        full_dir = self.storage.root / full["remote_prefix"]
+        restored = self.root / "restored-full.git"
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "restore_backup",
+                "--full-bundle", str(full_dir / "repo.bundle"),
+                "--full-metadata", str(full_dir / "metadata.json"),
+                "--output", str(restored),
+            ],
+        ):
+            restore_backup.main()
+        self.assertEqual(
+            self.git("rev-parse", "main", cwd=self.workspace),
+            self.git("rev-parse", "main", cwd=restored),
+        )
+
+    def test_unchanged_annotated_tag_needs_only_metadata(self) -> None:
+        self.git("tag", "-a", "v1", "-m", "Release", cwd=self.workspace)
+        self.git("push", "origin", "v1", cwd=self.workspace)
+        full = self.run_backup("101")
+
+        daily = self.run_backup("102")
+        self.assertEqual("incremental", daily["backup_type"])
+        self.assertEqual(full["remote_prefix"], daily["base_prefix"])
+        self.assertIsNone(daily["bundle_file"])
+
+        self.commit("second")
+        self.git("push", "origin", "main", cwd=self.workspace)
+        changed = self.run_backup("103")
+        self.assertEqual("incremental", changed["backup_type"])
+        self.assertEqual("repo.bundle", changed["bundle_file"])
+
     def test_new_month_starts_with_full_bundle(self) -> None:
         with patch.object(backup_main, "datetime") as clock:
             clock.now.return_value = datetime(2026, 10, 31, tzinfo=timezone.utc)
@@ -187,6 +223,15 @@ class BackupFlowTests(unittest.TestCase):
         full = self.run_backup("101")
         bundle = self.storage.root / full["remote_prefix"] / "repo.bundle"
         bundle.write_bytes(b"corrupt")
+
+        replacement = self.run_backup("102")
+        self.assertEqual("full", replacement["backup_type"])
+        self.assertNotEqual(full["remote_prefix"], replacement["remote_prefix"])
+
+    def test_non_object_monthly_metadata_is_replaced(self) -> None:
+        full = self.run_backup("101")
+        metadata_path = self.storage.root / full["remote_prefix"] / "metadata.json"
+        metadata_path.write_text("[]", encoding="utf-8")
 
         replacement = self.run_backup("102")
         self.assertEqual("full", replacement["backup_type"])

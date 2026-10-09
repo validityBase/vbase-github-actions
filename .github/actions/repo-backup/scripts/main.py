@@ -62,6 +62,8 @@ def find_monthly_base(
             bundle_path = directory / "base.bundle"
             storage.download_file(key, metadata_path)
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if not isinstance(metadata, dict):
+                raise ValueError("Invalid monthly base metadata.")
             refs = metadata["refs"]
             checksum = metadata["bundle_sha256"]
             if (
