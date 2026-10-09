@@ -19,9 +19,10 @@ This repository backs itself up through `.github/workflows/daily-repo-backup.yml
 That workflow is only the scheduled/manual caller; the reusable workflow
 contract remains in `.github/workflows/repo-backup.yml`.
 
-The caller uses the reviewed `@v1` release line for the same reason consumer
-repositories do: centrally reviewed fixes should roll forward without
-per-repository pin updates.
+The current caller uses the reviewed `@v1` release line. Monthly full and daily
+incremental artifacts change the restore contract and require a new major
+release ref, `@v2`. Move callers to that ref after it is released and the
+bucket retention policy is verified. The cron schedule stays daily.
 
 ## Layering
 
@@ -42,13 +43,19 @@ responsibilities.
   resolved secrets scoped to the backup process;
 - expects the caller repository to already be checked out;
 - fetches all branch and tag refs;
-- creates a full-history git bundle;
-- verifies the bundle;
-- writes `repo.bundle.sha256`;
-- writes `metadata.json`;
-- smoke-tests restore with `git clone <bundle>` and `git fsck --strict`;
-- uploads the bundle, checksum, and metadata with AWS CLI against the configured
-  S3-compatible endpoint.
+- finds and validates this month's completed full backup, if one exists;
+- creates a full-history bundle on the first successful run of a month, or if
+  the existing monthly backup is unusable;
+- otherwise creates a daily bundle containing Git objects absent from the
+  monthly full backup; unchanged repositories produce metadata only;
+- verifies the complete restored ref snapshot with `git fsck --strict`;
+- uploads the bundle and checksum when present, then uploads `metadata.json`
+  last as the completion marker, using AWS CLI and the S3-compatible endpoint.
+
+Each run still fetches full repository history on a fresh GitHub-hosted runner.
+This change reduces objects stored in the backup bucket, not GitHub-to-runner
+transfer. Daily bundles are differential from the monthly full backup, so
+changes already made earlier in the month may also appear in later bundles.
 
 This keeps credential loading, backup generation, and upload behavior in one
 shared action implementation while the reusable workflow owns only checkout
@@ -56,13 +63,53 @@ and caller-facing orchestration.
 
 ## Backup Object Layout
 
-Backups are uploaded under:
+Monthly full backups are uploaded under:
+
+```text
+<backup-prefix>/<owner>/<repo>/YYYY/MM/full/<timestamp>-<run-id>-<attempt>/
+```
+
+Daily incremental backups use the existing dated layout:
 
 ```text
 <backup-prefix>/<owner>/<repo>/YYYY/MM/DD/<timestamp>-<run-id>-<attempt>/
 ```
 
-The object set contains the git bundle, checksum, and metadata.
+A full backup has `repo.bundle`, `repo.bundle.sha256`, and `metadata.json`.
+An incremental has the same three files when new Git objects exist, or only
+`metadata.json` when the monthly full already contains every current object.
+The metadata records `backup_type`, `base_prefix`, SHA-256, current refs, and
+the run identifier. Only a run with `metadata.json` is considered complete.
+Existing daily full bundles remain valid standalone restore points.
+
+## Restore
+
+Download the selected monthly full `repo.bundle` and `metadata.json`, plus the
+selected daily bundle and metadata when restoring an incremental. The daily
+metadata names its exact monthly `base_prefix`. Check the checksums and restore
+the refs with the shared helper:
+
+```bash
+cd /path/to/vbase-github-actions/.github/actions/repo-backup
+python3 -m scripts.restore_backup \
+  --full-bundle /path/to/monthly/repo.bundle \
+  --full-metadata /path/to/monthly/metadata.json \
+  --daily-bundle /path/to/daily/repo.bundle \
+  --daily-metadata /path/to/daily/metadata.json \
+  --output /path/to/restored.git
+```
+
+Omit both `--daily-*` arguments for a monthly full restore. If the daily
+metadata has `bundle_file: null`, omit only `--daily-bundle`. The output is a
+bare mirror; clone it to obtain a working tree. The helper verifies the bundle
+hashes, required Git objects, exact refs, and repository integrity. Quarterly
+restore tests should download artifacts from object storage and use this path,
+not merely re-check the local bundle produced by a workflow run.
+
+The monthly full object must remain available for every dependent daily backup.
+If a lifecycle policy deletes daily objects after N days, retain monthly full
+objects for at least N + 31 days. Object Lock can prevent earlier deletion;
+bucket lifecycle and retention must be checked before enabling the new format.
 
 ## Composite Action Contract
 
@@ -90,8 +137,10 @@ Optional inputs:
 
 The action must never log secret values. Bitwarden project values are available
 only to the child backup process and are not exported through `GITHUB_ENV` or
-step outputs. Self-hosted runners must provide AWS CLI. The action does not back
-up Git LFS objects or submodule repositories.
+step outputs. Storage credentials need permission to list, read, and write
+objects under the backup prefix because each daily run reads its monthly base.
+Self-hosted runners must provide AWS CLI. The action does not back up Git LFS
+objects or submodule repositories.
 
 ## Reusable Workflow Contract
 

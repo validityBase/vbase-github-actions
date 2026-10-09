@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -62,6 +63,32 @@ class ObjectStorageUploader:
             "--only-show-errors",
         )
 
+    def list_keys(self, prefix: str) -> list[str]:
+        """List object keys under one repository's monthly full-backup prefix."""
+        output = self._run_aws(
+            "s3api", "list-objects-v2", "--bucket", self.bucket_name,
+            "--prefix", prefix, "--endpoint-url", self.endpoint_url,
+            "--region", self.region, "--output", "json",
+            log_output=False,
+        )
+        return [item["Key"] for item in json.loads(output).get("Contents", [])]
+
+    def download_file(self, remote_name: str, local_path: Path) -> None:
+        """Download a monthly base artifact for verification and restore testing."""
+        if (
+            not remote_name
+            or remote_name.startswith("/")
+            or ".." in remote_name.split("/")
+        ):
+            raise ValueError("Invalid object storage remote name.")
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        self._run_aws(
+            "s3", "cp", f"s3://{self.bucket_name}/{remote_name}",
+            str(local_path), "--endpoint-url", self.endpoint_url,
+            "--region", self.region, "--only-show-errors",
+            log_output=False,
+        )
+
     @staticmethod
     def _validate_endpoint_url(endpoint_url: str) -> str:
         normalized_url = endpoint_url.rstrip("/")
@@ -71,7 +98,9 @@ class ObjectStorageUploader:
                 "OBJECT_STORAGE_ENDPOINT_URL must be an http(s) URL with a host."
             )
         if endpoint.username or endpoint.password:
-            raise ValueError("OBJECT_STORAGE_ENDPOINT_URL must not include credentials.")
+            raise ValueError(
+                "OBJECT_STORAGE_ENDPOINT_URL must not include credentials."
+            )
         if endpoint.path.rstrip("/"):
             raise ValueError("OBJECT_STORAGE_ENDPOINT_URL must not include a path.")
         if endpoint.query or endpoint.fragment:
@@ -109,7 +138,7 @@ class ObjectStorageUploader:
             "on this runner."
         )
 
-    def _run_aws(self, *args: str) -> None:
+    def _run_aws(self, *args: str, log_output: bool = True) -> str:
         env = os.environ.copy()
         env.update(
             {
@@ -138,9 +167,10 @@ class ObjectStorageUploader:
                 print(output)
             raise
 
-        output = self._redact_output(completed.stdout.strip())
-        if output:
-            print(output)
+        output = completed.stdout.strip()
+        if output and log_output:
+            print(self._redact_output(output))
+        return output
 
     def _redact_output(self, text: str) -> str:
         text = text.replace(self.access_key_id, "***")

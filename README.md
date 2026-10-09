@@ -320,7 +320,8 @@ and `cmd`.
 
 Reusable workflow for daily or manual production repository backups. The caller
 repository owns the schedule; this workflow invokes the shared `repo-backup`
-action in Bitwarden mode.
+action in Bitwarden mode. The action selects a monthly full backup or a daily
+incremental backup on each run.
 
 ```yaml
 name: Daily repo backup
