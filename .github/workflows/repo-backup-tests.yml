@@ -31,6 +31,8 @@ jobs:
           python-version: "3.12"
 
       - name: Run unit tests
+        env:
+          PYTHONPATH: .github/actions/repo-backup
         run: >-
           python -m unittest discover
           -s .github/actions/repo-backup/scripts
