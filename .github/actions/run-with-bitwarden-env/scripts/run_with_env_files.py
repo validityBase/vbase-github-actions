@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
 
+from cache_config import cache_options
 from scoped_output import ScopedMaskFilter, run_with_scoped_masks
 
 ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -167,6 +168,7 @@ def dump_project(
         command.extend(("--project-id", project.project_id or ""))
     if project.organization_id:
         command.extend(("--org-id", project.organization_id))
+    command.extend(cache_options(environ))
     command.extend(("--output", str(output_path)))
 
     return run_with_scoped_masks(
@@ -189,6 +191,7 @@ def run_with_env_files(
     )
     with tempfile.TemporaryDirectory(prefix="vbase-btenv-") as temp_directory:
         child_env = dict(environ)
+        child_env.pop("BTENV_CACHE_DIR", None)
         for index, project in enumerate(projects):
             output_path = Path(temp_directory, f"project-{index}.env")
             return_code = dump_project(project, output_path, environ, mask_filter)

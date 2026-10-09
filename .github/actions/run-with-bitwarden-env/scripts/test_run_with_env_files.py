@@ -139,6 +139,7 @@ class RunWithEnvFilesTests(unittest.TestCase):
             _environ: dict[str, str],
             _mask_filter: run_with_env_files.ScopedMaskFilter,
         ) -> int:
+            self.assertEqual(_environ["BTENV_CACHE_DIR"], "/private/cache")
             path.write_text('VALUE="secret"\n', encoding="utf-8")
             return 0
 
@@ -160,13 +161,14 @@ class RunWithEnvFilesTests(unittest.TestCase):
                 projects,
                 "docker compose up",
                 Path(working_directory),
-                {"APP_TOKEN": "app-token"},
+                {"APP_TOKEN": "app-token", "BTENV_CACHE_DIR": "/private/cache"},
             )
 
         self.assertEqual(0, return_code)
         command_env = run_mock.call_args.kwargs["env"]
         env_file = Path(command_env["APP_ENV_FILE"])
         self.assertNotIn("APP_TOKEN", command_env)
+        self.assertNotIn("BTENV_CACHE_DIR", command_env)
         self.assertFalse(env_file.exists())
         run_mock.assert_called_once()
         mask_filter = run_mock.call_args.kwargs["mask_filter"]
