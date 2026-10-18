@@ -32,7 +32,7 @@ permissions:
 
 jobs:
   update-main-docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1

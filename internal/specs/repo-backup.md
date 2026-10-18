@@ -157,7 +157,7 @@ Important inputs:
 - `bitwarden-org-id` defaults to the vbase Bitwarden organization id.
 - `vbase-common-ref` defaults to `v0.1.3`.
 - `python-version` defaults to `3.12`.
-- `runner` defaults to `ubuntu-latest`.
+- `runner` defaults to `ubuntu-24.04`.
 
 Object storage credentials are read from the configured Bitwarden project only
 inside the shared action's backup process. Bucket lifecycle rules, credential
