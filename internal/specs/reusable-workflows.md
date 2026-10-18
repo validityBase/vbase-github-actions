@@ -3,6 +3,9 @@
 Reusable workflows live under `.github/workflows/` and should be preferred for
 full CI/CD processes.
 
+`publish-docs.yml`, `python-lint.yml`, and `repo-backup.yml` default their
+`runner` input to `ubuntu-24.04`; callers can override it explicitly.
+
 Reusable workflow roadmap:
 - `publish-docs.yml` (implemented)
 - `python-lint.yml` (implemented)
