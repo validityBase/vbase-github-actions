@@ -204,8 +204,3 @@ handle concurrent publishers by fetching and rebasing the target branch before
 retrying a rejected push only when the remote branch has advanced, with a
 bounded number of attempts. If the remote already contains the local commit,
 the publish is considered successful.
-
-## repo-backup
-
-The low-level composite action contract is canonical in
-`internal/specs/repo-backup.md#composite-action-contract`.
