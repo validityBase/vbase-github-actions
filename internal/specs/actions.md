@@ -199,6 +199,8 @@ Optional inputs:
 - `resolve-absolute-links-repos`
 
 The action is a Node 24 action and runs the checked-in bundled `index.js`.
+Git HTTPS authentication for the central docs repository uses `x-access-token`
+as the username and `docs-repo-access-token` as the password.
 Source TypeScript and package files are kept with the action for maintenance,
 but `node_modules` must not be committed. Runtime dependencies should pass
 `npm audit --omit=dev`; after changing TypeScript source or package
