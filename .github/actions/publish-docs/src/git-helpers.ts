@@ -17,7 +17,7 @@ let targetBranch = core.getInput('target-repository-branch') as string;
 
 export async function cloneDocsRepository(): Promise<void> {
     console.log(`Cloning the docs repository: "${docsRepository}"...`);
-    await run("git", ["clone", "-b", getTargetBranch(), `https://${docsRepoAccessToken}@github.com/${docsRepository}.git`, Constants.MainDocsDirectory], null);
+    await run("git", ["clone", "-b", getTargetBranch(), `https://x-access-token:${docsRepoAccessToken}@github.com/${docsRepository}.git`, Constants.MainDocsDirectory], null);
     console.log('Cloning the docs repository done.');
 }
 

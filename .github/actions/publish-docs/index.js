@@ -31672,7 +31672,7 @@ if (!targetBranch) {
 function cloneDocsRepository() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Cloning the docs repository: "${docsRepository}"...`);
-        yield (0, process_helpers_1.run)("git", ["clone", "-b", getTargetBranch(), `https://${docsRepoAccessToken}@github.com/${docsRepository}.git`, constants_1.Constants.MainDocsDirectory], null);
+        yield (0, process_helpers_1.run)("git", ["clone", "-b", getTargetBranch(), `https://x-access-token:${docsRepoAccessToken}@github.com/${docsRepository}.git`, constants_1.Constants.MainDocsDirectory], null);
         console.log('Cloning the docs repository done.');
     });
 }
