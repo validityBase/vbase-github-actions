@@ -49,6 +49,8 @@ jobs:
 
 Required input:
 - `docs-repo-access-token`: token that can push to the central docs repository.
+  Git HTTPS authentication uses `x-access-token` as the username and this token
+  as the password.
 
 Optional inputs:
 - `source-docs-path`: source Markdown folder, defaults to `docs`.
