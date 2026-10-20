@@ -51,7 +51,7 @@ runs:
           exit 1
         fi
 
-        python -m pip install --quiet "git+https://${VBASE_COMMON_REPO_READ_TOKEN}@github.com/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
+        python -m pip install --quiet "git+https://x-access-token:${VBASE_COMMON_REPO_READ_TOKEN}@github.com/validityBase/vbase-common.git@${VBASE_COMMON_REF}"
 
         python3 - <<'PY'
         import json
