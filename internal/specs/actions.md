@@ -117,6 +117,9 @@ Caller-provided secrets:
 - `VBASE_NOTIFICATIONS_JSON_DESCRIPTOR` for Slack/email configuration.
 - `VBASE_COMMON_REPO_READ_TOKEN` for installing `vbase-common`.
 
+The Git HTTPS install uses `x-access-token` as the username and this token as
+the password.
+
 Required inputs:
 - `title`
 - `message`
