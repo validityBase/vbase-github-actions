@@ -208,32 +208,6 @@ with:
 `product-repo-pat` is optional for public repositories; the action falls back
 to `GITHUB_TOKEN` (authenticated, higher rate limits than anonymous access).
 
-### repo-backup action
-
-Low-level composite action for callers that already checkout the repository and
-need to own backup orchestration. Prefer the reusable `repo-backup.yml` workflow
-for production backups. The action supports direct object-storage inputs and a
-Bitwarden-backed mode; the reusable workflow uses the Bitwarden mode.
-
-```yaml
-- name: Create and upload repo backup
-  uses: validityBase/vbase-github-actions/.github/actions/repo-backup@<reviewed-ref>
-  with:
-    backup-prefix: github-backups
-    bundle-name: repo.bundle
-    object-storage-access-key-id: ${{ env.OBJECT_STORAGE_ACCESS_KEY_ID }}
-    object-storage-secret-access-key: ${{ env.OBJECT_STORAGE_SECRET_ACCESS_KEY }}
-    object-storage-bucket-name: ${{ env.OBJECT_STORAGE_BUCKET_NAME }}
-    object-storage-endpoint-url: ${{ env.OBJECT_STORAGE_ENDPOINT_URL }}
-    object-storage-region: ${{ env.OBJECT_STORAGE_REGION }}
-```
-
-Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
-`repo-backup`.
-
-The canonical action and workflow contract is in
-`internal/specs/repo-backup.md`; this README keeps only caller examples.
-
 ## Release Policy
 
 Downstream repositories should reference this repository through reviewed
@@ -315,39 +289,3 @@ For migrated docs lock files, pass `require-hashes: true`.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
-
-### repo-backup reusable workflow
-
-Reusable workflow for daily or manual production repository backups. The caller
-repository owns the schedule; this workflow invokes the shared `repo-backup`
-action in Bitwarden mode. The action selects a monthly full backup or a daily
-incremental backup on each run.
-
-```yaml
-name: Daily repo backup
-
-on:
-  schedule:
-    - cron: "17 2 * * *"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-jobs:
-  backup:
-    uses: validityBase/vbase-github-actions/.github/workflows/repo-backup.yml@<reviewed-ref>
-    with:
-      backup-prefix: github-backups
-      bundle-name: repo.bundle
-      bitwarden-project: vbase-repo-backups
-    secrets:
-      VBASE_COMMON_REPO_READ_TOKEN: ${{ secrets.VBASE_COMMON_REPO_READ_TOKEN }}
-      BWS_ACCESS_TOKEN: ${{ secrets.VBASE_REPO_BACKUP_SECRETS_TOKEN }}
-```
-
-Replace `<reviewed-ref>` with a full commit SHA or release tag that includes
-`repo-backup`.
-
-The canonical action and workflow contract is in
-`internal/specs/repo-backup.md`; this README keeps only caller examples.
