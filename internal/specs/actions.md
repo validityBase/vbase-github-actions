@@ -74,8 +74,8 @@ Shared optional inputs:
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The
-supported `bw-sm` release must include `python-dotenv` so prepared commands can
-parse the canonical dotenv output with interpolation disabled. The
+supported `bw-sm` revision must provide `bw_sm.env.parse_dotenv` so prepared
+commands use the canonical parser for the dotenv output. The
 action must not export Bitwarden secrets or generated paths through
 `$GITHUB_ENV`; they stay scoped to the command process. Generated files must be
 private and must be removed whether the command succeeds or fails. The

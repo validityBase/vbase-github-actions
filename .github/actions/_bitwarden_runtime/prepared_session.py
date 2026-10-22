@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import os
 import stat
@@ -11,8 +10,6 @@ from pathlib import Path
 from typing import Mapping
 
 from _bitwarden_runtime.project_files import ENV_KEY_PATTERN
-from dotenv import dotenv_values
-
 SESSION_VERSION = 1
 
 
@@ -126,21 +123,21 @@ def load_session_manifest(path: Path) -> PreparedSession:
 
 
 def read_dotenv_values(path: Path) -> list[str]:
-    """Read bw-sm dotenv values with interpolation disabled for scoped masking."""
+    """Read canonical bw-sm dotenv values for scoped masking."""
     try:
         content = path.read_text(encoding="utf-8")
-        parsed = dotenv_values(
-            stream=io.StringIO(content),
-            interpolate=False,
-        )
     except OSError as exc:
         raise SessionError(f"Unable to read prepared env file: {path}") from exc
-    lines = content.split("\n")
-    if lines[-1] == "":
-        lines.pop()
-    if any(
-        not ENV_KEY_PATTERN.fullmatch(key) or value is None
-        for key, value in parsed.items()
-    ) or len(parsed) != len(lines):
-        raise SessionError(f"Prepared dotenv file has invalid content: {path}")
-    return [value for value in parsed.values() if value]
+
+    try:
+        from bw_sm.env import parse_dotenv
+    except ImportError as exc:
+        raise SessionError(
+            "Installed bw-sm does not provide the canonical dotenv parser"
+        ) from exc
+
+    try:
+        values = parse_dotenv(content)
+    except ValueError as exc:
+        raise SessionError(f"Prepared dotenv file has invalid content: {path}") from exc
+    return [value for value in values.values() if value]

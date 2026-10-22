@@ -14,8 +14,17 @@ from _bitwarden_runtime import prepared_session
 class RunWithPreparedEnvTests(unittest.TestCase):
     """Verify reuse, token isolation, masking, and exit-code propagation."""
 
+    @mock.patch.object(
+        run_with_prepared_env,
+        "read_dotenv_values",
+        return_value=["loaded-secret"],
+    )
     @mock.patch.object(run_with_prepared_env, "run_with_scoped_masks")
-    def test_runs_with_paths_without_access_tokens(self, run_mock: mock.Mock) -> None:
+    def test_runs_with_paths_without_access_tokens(
+        self,
+        run_mock: mock.Mock,
+        read_values_mock: mock.Mock,
+    ) -> None:
         """The child receives prepared paths while machine tokens are removed."""
         run_mock.return_value = 19
         with tempfile.TemporaryDirectory() as directory:
@@ -42,6 +51,7 @@ class RunWithPreparedEnvTests(unittest.TestCase):
         self.assertEqual("value", child_env["UNCHANGED"])
         mask_filter = run_mock.call_args.kwargs["mask_filter"]
         self.assertIn("loaded-secret", mask_filter._masks)
+        read_values_mock.assert_called_once_with(env_file.resolve())
 
 
 if __name__ == "__main__":

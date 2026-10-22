@@ -29,12 +29,10 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
 
-      - name: Set up Python and test dependencies
-        uses: ./.github/actions/setup-python-deps
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # actions/setup-python v6.2.0
         with:
           python-version: "3.11"
-          requirements-files: .github/actions/_bitwarden_runtime/requirements-test.txt
-          require-hashes: true
 
       - name: Run unit tests
         run: |
@@ -61,15 +59,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
 
-      - name: Set up Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # actions/setup-node v6.3.0
+      - name: Set up Node.js and install dependencies
+        uses: ./.github/actions/setup-node-deps
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: .github/actions/prepare-bitwarden-env/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
+          working-directory: .github/actions/prepare-bitwarden-env
+          package-lock-path: .github/actions/prepare-bitwarden-env/package-lock.json
 
       - name: Run unit tests
         run: npm test
