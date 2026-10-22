@@ -66,6 +66,9 @@ Prepared-session mode input:
 
 - `session-manifest`: the output of `prepare-bitwarden-env`. It cannot be
   combined with project selectors, `bitwarden-access-token`, or `projects-json`.
+- `load-env-file-variable`: optionally names one `env-file-variable` from the
+  manifest whose dotenv values should be loaded directly into the command
+  environment. The selected path variable is not exposed to the command.
 
 Shared optional inputs:
 
@@ -144,8 +147,9 @@ before recursively removing the session on success, failure, or cancellation.
 Cleanup reads only local state and never contacts Bitwarden. Prepared commands
 validate file containment and permissions, remove machine-token variables from
 the child environment, parse values with the maintained `python-dotenv` library
-only to construct command-scoped masks, and preserve the wrapped command's exit
-code.
+to construct command-scoped masks and, when requested, the command environment.
+They preserve the wrapped command's exit code and never evaluate dotenv content
+as shell code.
 
 Example:
 

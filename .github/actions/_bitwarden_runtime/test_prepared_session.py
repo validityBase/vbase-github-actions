@@ -48,7 +48,7 @@ class PreparedSessionTests(unittest.TestCase):
             )
             with mock.patch.dict(sys.modules, modules):
                 self.assertEqual(
-                    ["secret\nvalue"], prepared_session.read_dotenv_values(env_file)
+                    {"VALUE": "secret\nvalue"}, prepared_session.read_dotenv(env_file)
                 )
 
     def test_uses_bw_sm_canonical_dotenv_parser(self) -> None:
@@ -64,8 +64,8 @@ class PreparedSessionTests(unittest.TestCase):
                 sys.modules, self._parser_modules(parse_dotenv)
             ):
                 self.assertEqual(
-                    ["${OTHER_VALUE}"],
-                    prepared_session.read_dotenv_values(env_file),
+                    {"REFERENCE": "${OTHER_VALUE}", "EMPTY": ""},
+                    prepared_session.read_dotenv(env_file),
                 )
             parse_dotenv.assert_called_once_with('REFERENCE="${OTHER_VALUE}"\n')
 
@@ -82,7 +82,7 @@ class PreparedSessionTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     prepared_session.SessionError, "invalid content"
                 ):
-                    prepared_session.read_dotenv_values(env_file)
+                    prepared_session.read_dotenv(env_file)
 
     def test_reads_an_empty_project(self) -> None:
         """A project with no secrets requires no command-scoped masks."""
@@ -93,7 +93,7 @@ class PreparedSessionTests(unittest.TestCase):
             with mock.patch.dict(
                 sys.modules, self._parser_modules(lambda content: {})
             ):
-                self.assertEqual([], prepared_session.read_dotenv_values(env_file))
+                self.assertEqual({}, prepared_session.read_dotenv(env_file))
 
     def test_rejects_non_private_manifest(self) -> None:
         """Other users must not be able to read the path manifest."""

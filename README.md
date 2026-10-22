@@ -71,6 +71,9 @@ Python requirements before this action. The action keeps Bitwarden secrets
 scoped to the command step instead of exporting them to later workflow steps.
 Prepared-session mode requires a reviewed `bw-sm` revision that provides the
 canonical `bw_sm.env.parse_dotenv` parser.
+Set `load-env-file-variable` to one manifest key when that project's values
+must be injected into the command environment instead of exposed as a dotenv
+file path.
 See [the shared actions spec](internal/specs/actions.md#run-with-bitwarden-env)
 for the canonical multi-project env-file interface and example.
 

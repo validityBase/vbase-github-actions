@@ -122,8 +122,8 @@ def load_session_manifest(path: Path) -> PreparedSession:
     return PreparedSession(env_files, frozenset(raw_remove_env))
 
 
-def read_dotenv_values(path: Path) -> list[str]:
-    """Read canonical bw-sm dotenv values for scoped masking."""
+def read_dotenv(path: Path) -> dict[str, str]:
+    """Read one canonical bw-sm dotenv file without evaluating shell code."""
     try:
         content = path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -137,7 +137,6 @@ def read_dotenv_values(path: Path) -> list[str]:
         ) from exc
 
     try:
-        values = parse_dotenv(content)
+        return parse_dotenv(content)
     except ValueError as exc:
         raise SessionError(f"Prepared dotenv file has invalid content: {path}") from exc
-    return [value for value in values.values() if value]

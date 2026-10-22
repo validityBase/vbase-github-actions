@@ -47,6 +47,12 @@ inputs:
       reuses the prepared env files and does not call Bitwarden.
     required: false
     default: ""
+  load-env-file-variable:
+    description: >
+      Prepared-session env-file-variable to load into the command environment
+      instead of exposing its file path.
+    required: false
+    default: ""
   working-directory:
     description: Directory where the command should run.
     required: false
@@ -66,6 +72,7 @@ runs:
         BTENV_WORKING_DIRECTORY: ${{ inputs.working-directory }}
         BTENV_PROJECTS_JSON: ${{ inputs.projects-json }}
         BTENV_SESSION_MANIFEST: ${{ inputs.session-manifest }}
+        BTENV_LOAD_ENV_FILE_VARIABLE: ${{ inputs.load-env-file-variable }}
       run: |
         set -euo pipefail
 
@@ -93,6 +100,9 @@ runs:
             echo "session-manifest must identify an existing file" >&2
             exit 1
           fi
+        elif [ -n "$BTENV_LOAD_ENV_FILE_VARIABLE" ]; then
+          echo "load-env-file-variable requires session-manifest" >&2
+          exit 1
         elif [ -n "$BTENV_PROJECTS_JSON" ]; then
           if [ -n "$BTENV_PROJECT" ] || [ -n "$BTENV_PROJECT_ID" ] || [ -n "$BTENV_ACCESS_TOKEN" ]; then
             echo "projects-json cannot be combined with project, project-id, or bitwarden-access-token" >&2
@@ -154,6 +164,7 @@ runs:
         BTENV_ACTION_PATH: ${{ github.action_path }}
         BTENV_COMMAND: ${{ inputs.command }}
         BTENV_SESSION_MANIFEST: ${{ inputs.session-manifest }}
+        BTENV_LOAD_ENV_FILE_VARIABLE: ${{ inputs.load-env-file-variable }}
       run: |
         set -euo pipefail
         python "$BTENV_ACTION_PATH/scripts/run_with_prepared_env.py"
