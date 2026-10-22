@@ -135,9 +135,12 @@ def read_dotenv_values(path: Path) -> list[str]:
         )
     except OSError as exc:
         raise SessionError(f"Unable to read prepared env file: {path}") from exc
+    lines = content.split("\n")
+    if lines[-1] == "":
+        lines.pop()
     if any(
         not ENV_KEY_PATTERN.fullmatch(key) or value is None
         for key, value in parsed.items()
-    ) or len(parsed) != len(content.splitlines()):
+    ) or len(parsed) != len(lines):
         raise SessionError(f"Prepared dotenv file has invalid content: {path}")
     return [value for value in parsed.values() if value]

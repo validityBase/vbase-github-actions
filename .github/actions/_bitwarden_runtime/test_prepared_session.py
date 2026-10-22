@@ -45,6 +45,15 @@ class PreparedSessionTests(unittest.TestCase):
                 ["${OTHER_VALUE}"], prepared_session.read_dotenv_values(env_file)
             )
 
+    def test_preserves_unicode_line_separators(self) -> None:
+        """Unicode separators inside quoted values are not dotenv line endings."""
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory, "project.env")
+            value = "before\u2028middle\u2029after"
+            env_file.write_text(f'VALUE="{value}"\n', encoding="utf-8")
+
+            self.assertEqual([value], prepared_session.read_dotenv_values(env_file))
+
     def test_rejects_malformed_dotenv_content(self) -> None:
         """Malformed lines cannot be silently skipped while masks are registered."""
         with tempfile.TemporaryDirectory() as directory:
