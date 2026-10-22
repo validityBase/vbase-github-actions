@@ -74,6 +74,8 @@ Shared optional inputs:
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The
+supported `bw-sm` release must include `python-dotenv` so prepared commands can
+parse the canonical dotenv output with interpolation disabled. The
 action must not export Bitwarden secrets or generated paths through
 `$GITHUB_ENV`; they stay scoped to the command process. Generated files must be
 private and must be removed whether the command succeeds or fails. The
@@ -141,8 +143,9 @@ or loaded secret values. The JavaScript post-job hook validates the saved path
 before recursively removing the session on success, failure, or cancellation.
 Cleanup reads only local state and never contacts Bitwarden. Prepared commands
 validate file containment and permissions, remove machine-token variables from
-the child environment, read values only to construct command-scoped masks, and
-preserve the wrapped command's exit code.
+the child environment, parse values with the maintained `python-dotenv` library
+only to construct command-scoped masks, and preserve the wrapped command's exit
+code.
 
 Example:
 

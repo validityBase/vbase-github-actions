@@ -69,6 +69,8 @@ Use `project-id` instead of `project` when the workflow should avoid resolving
 by name. Install `bw-sm` and `bitwarden-sdk` through normal locked/private
 Python requirements before this action. The action keeps Bitwarden secrets
 scoped to the command step instead of exporting them to later workflow steps.
+Prepared-session mode requires a reviewed `bw-sm` release that declares its
+`python-dotenv` runtime dependency.
 See [the shared actions spec](internal/specs/actions.md#run-with-bitwarden-env)
 for the canonical multi-project env-file interface and example.
 

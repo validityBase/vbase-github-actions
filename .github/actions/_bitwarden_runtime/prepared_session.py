@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
-import re
 import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
-ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-DOTENV_LINE_PATTERN = re.compile(r'^([A-Za-z_][A-Za-z0-9_]*)="(.*)"$')
+from _bitwarden_runtime.project_files import ENV_KEY_PATTERN
+from dotenv import dotenv_values
+
 SESSION_VERSION = 1
 
 
@@ -124,37 +125,19 @@ def load_session_manifest(path: Path) -> PreparedSession:
     return PreparedSession(env_files, frozenset(raw_remove_env))
 
 
-def _decode_dotenv_value(value: str) -> str:
-    """Decode the exact quoted format emitted by bw_sm.env dump."""
-    decoded: list[str] = []
-    index = 0
-    escapes = {"\\": "\\", '"': '"', "r": "\r", "n": "\n"}
-    while index < len(value):
-        character = value[index]
-        if character != "\\":
-            decoded.append(character)
-            index += 1
-            continue
-        index += 1
-        if index >= len(value) or value[index] not in escapes:
-            raise SessionError("Prepared dotenv file contains an invalid escape")
-        decoded.append(escapes[value[index]])
-        index += 1
-    return "".join(decoded)
-
-
 def read_dotenv_values(path: Path) -> list[str]:
-    """Read values from the private dotenv format for command-scoped masking."""
-    values: list[str] = []
+    """Read bw-sm dotenv values with interpolation disabled for scoped masking."""
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        content = path.read_text(encoding="utf-8")
+        parsed = dotenv_values(
+            stream=io.StringIO(content),
+            interpolate=False,
+        )
     except OSError as exc:
         raise SessionError(f"Unable to read prepared env file: {path}") from exc
-    for line in lines:
-        match = DOTENV_LINE_PATTERN.fullmatch(line)
-        if not match:
-            raise SessionError(f"Prepared dotenv file has an invalid line: {path}")
-        value = _decode_dotenv_value(match.group(2))
-        if value:
-            values.append(value)
-    return values
+    if any(
+        not ENV_KEY_PATTERN.fullmatch(key) or value is None
+        for key, value in parsed.items()
+    ) or len(parsed) != len(content.splitlines()):
+        raise SessionError(f"Prepared dotenv file has invalid content: {path}")
+    return [value for value in parsed.values() if value]

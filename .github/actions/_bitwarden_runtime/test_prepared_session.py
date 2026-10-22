@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import prepared_session
+from _bitwarden_runtime import prepared_session
 
 
 class PreparedSessionTests(unittest.TestCase):
@@ -34,6 +34,35 @@ class PreparedSessionTests(unittest.TestCase):
             self.assertEqual(
                 ["secret\nvalue"], prepared_session.read_dotenv_values(env_file)
             )
+
+    def test_reads_values_without_environment_interpolation(self) -> None:
+        """Secret references remain literal when constructing scoped masks."""
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory, "project.env")
+            env_file.write_text('REFERENCE="${OTHER_VALUE}"\n', encoding="utf-8")
+
+            self.assertEqual(
+                ["${OTHER_VALUE}"], prepared_session.read_dotenv_values(env_file)
+            )
+
+    def test_rejects_malformed_dotenv_content(self) -> None:
+        """Malformed lines cannot be silently skipped while masks are registered."""
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory, "project.env")
+            env_file.write_text('VALID="secret"\nmalformed line\n', encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                prepared_session.SessionError, "invalid content"
+            ):
+                prepared_session.read_dotenv_values(env_file)
+
+    def test_reads_an_empty_project(self) -> None:
+        """A project with no secrets requires no command-scoped masks."""
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory, "project.env")
+            env_file.write_text("", encoding="utf-8")
+
+            self.assertEqual([], prepared_session.read_dotenv_values(env_file))
 
     def test_rejects_non_private_manifest(self) -> None:
         """Other users must not be able to read the path manifest."""

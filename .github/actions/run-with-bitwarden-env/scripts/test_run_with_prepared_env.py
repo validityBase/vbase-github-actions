@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import prepared_session
 import run_with_prepared_env
+from _bitwarden_runtime import prepared_session
 
 
 class RunWithPreparedEnvTests(unittest.TestCase):

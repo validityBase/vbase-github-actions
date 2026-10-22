@@ -3,6 +3,7 @@ name: Run with Bitwarden env tests
 on:
   pull_request:
     paths:
+      - ".github/actions/_bitwarden_runtime/**"
       - ".github/actions/prepare-bitwarden-env/**"
       - ".github/actions/run-with-bitwarden-env/**"
       - ".github/workflows/run-with-bitwarden-env-tests.yml"
@@ -10,6 +11,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/actions/_bitwarden_runtime/**"
       - ".github/actions/prepare-bitwarden-env/**"
       - ".github/actions/run-with-bitwarden-env/**"
       - ".github/workflows/run-with-bitwarden-env-tests.yml"
@@ -21,17 +23,25 @@ jobs:
   unit-tests:
     name: Bitwarden env action unit tests
     runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: .github/actions
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
 
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # actions/setup-python v6.2.0
+      - name: Set up Python and test dependencies
+        uses: ./.github/actions/setup-python-deps
         with:
           python-version: "3.11"
+          requirements-files: .github/actions/_bitwarden_runtime/requirements-test.txt
+          require-hashes: true
 
       - name: Run unit tests
         run: |
+          python -m unittest discover \
+            -s .github/actions/_bitwarden_runtime \
+            -p 'test_*.py' \
+            -v
           python -m unittest discover \
             -s .github/actions/run-with-bitwarden-env/scripts \
             -p 'test_*.py' \

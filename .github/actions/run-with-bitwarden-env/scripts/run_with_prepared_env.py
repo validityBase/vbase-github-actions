@@ -7,8 +7,18 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
-from prepared_session import SessionError, load_session_manifest, read_dotenv_values
-from scoped_output import ScopedMaskFilter, run_with_scoped_masks
+ACTIONS_PATH = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ACTIONS_PATH))
+
+from _bitwarden_runtime.prepared_session import (
+    SessionError,  # noqa: E402
+    load_session_manifest,
+    read_dotenv_values,
+)
+from _bitwarden_runtime.scoped_output import (
+    ScopedMaskFilter,  # noqa: E402
+    run_with_scoped_masks,
+)
 
 
 def run_with_prepared_env(
@@ -41,9 +51,7 @@ def main() -> int:
     try:
         manifest_path = Path(os.environ["BTENV_SESSION_MANIFEST"])
         command = os.environ["BTENV_COMMAND"]
-        return run_with_prepared_env(
-            manifest_path, command, Path.cwd(), os.environ
-        )
+        return run_with_prepared_env(manifest_path, command, Path.cwd(), os.environ)
     except (KeyError, SessionError) as exc:
         print(f"Invalid prepared Bitwarden session: {exc}", file=sys.stderr)
         return 2

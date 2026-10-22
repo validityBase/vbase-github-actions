@@ -7,7 +7,7 @@ import io
 import sys
 import unittest
 
-import scoped_output
+from _bitwarden_runtime import scoped_output
 
 
 class ScopedOutputTests(unittest.TestCase):

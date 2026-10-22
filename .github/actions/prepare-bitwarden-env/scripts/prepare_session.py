@@ -8,19 +8,17 @@ import sys
 from pathlib import Path
 from typing import Mapping, Sequence
 
-RUN_ACTION_SCRIPTS = (
-    Path(__file__).resolve().parents[2] / "run-with-bitwarden-env" / "scripts"
-)
-sys.path.insert(0, str(RUN_ACTION_SCRIPTS))
+ACTIONS_PATH = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ACTIONS_PATH))
 
-from prepared_session import write_session_manifest  # noqa: E402
-from run_with_env_files import (  # noqa: E402
-    ConfigurationError,
+from _bitwarden_runtime.prepared_session import write_session_manifest  # noqa: E402
+from _bitwarden_runtime.project_files import (
+    ConfigurationError,  # noqa: E402
     ProjectConfig,
-    ScopedMaskFilter,
     dump_project,
     parse_projects,
 )
+from _bitwarden_runtime.scoped_output import ScopedMaskFilter  # noqa: E402
 
 
 def _scope_key(
@@ -52,9 +50,7 @@ def prepare_session(
     environ: Mapping[str, str],
 ) -> int:
     """Load every distinct project scope once and write its path manifest."""
-    mask_filter = ScopedMaskFilter(
-        [environ[project.token_env] for project in projects]
-    )
+    mask_filter = ScopedMaskFilter([environ[project.token_env] for project in projects])
     loaded_scopes: dict[tuple[str, str | None, str | None, str | None, str], Path] = {}
     env_files: dict[str, Path] = {}
 
