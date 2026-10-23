@@ -20,6 +20,10 @@ The caller owns event triggers, permissions, and the `pypi` environment. A
 maintainer may need to approve workflows on the bot-created PR. Merging its
 reviewed Release PR authorizes publication.
 
+Maintainer steps are kept in the shared
+[release runbook](../../../RELEASE_MANAGEMENT.md); package repositories link
+to that runbook and supply their own settings.
+
 ## Configuration
 
 Required workflow inputs:
@@ -120,3 +124,5 @@ alternate changelog paths/tag prefixes, component resets, unchanged files on
 invalid input, path escapes, and wheel/sdist metadata matching. Preparation
 requires real entries under Unreleased. User impact is reviewed by maintainers;
 the helper does not infer it from arbitrary prose or commit messages.
+The open-PR guard checks every page, ignores fork heads and missing head
+repositories, and blocks only release branches in the caller repository.

@@ -34,10 +34,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         DEFAULT_BRANCH: ${{ inputs.default-branch }}
         RELEASE_PREFIX: ${{ inputs.release-branch-prefix }}
-      run: "branches=$(gh api --method GET --paginate \"repos/$GITHUB_REPOSITORY/pulls\" -f state=open -f base=\"\
-        $DEFAULT_BRANCH\" -f per_page=100 --jq '.[].head.ref')\nwhile IFS= read -r branch; do\n  if [[ \"$branch\"\
-        \ == \"$RELEASE_PREFIX\"* ]]; then\n    echo 'An open Release PR already exists.'\n    exit 1\n  fi\ndone\
-        \ <<< \"$branches\""
+      run: bash .release-tools/.github/actions/python-release/scripts/check_open_release_prs.sh
     - id: version
       name: Prepare release
       uses: ./.release-tools/.github/actions/python-release
