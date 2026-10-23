@@ -289,3 +289,10 @@ For migrated docs lock files, pass `require-hashes: true`.
 Use `pre-publish-shell: pwsh` for Windows PowerShell commands.
 Supported `pre-publish-shell` values are `bash`, `sh`, `pwsh`, `powershell`,
 and `cmd`.
+
+## Python release automation
+
+Maintainer steps are in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md).
+Shared preparation, tagging, distribution validation, and GitHub Release
+workflows are documented in the [Python release guide](.github/actions/python-release/README.md).
+The OIDC upload uses a composite action inside the caller-owned publishing job.

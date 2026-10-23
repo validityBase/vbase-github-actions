@@ -1,0 +1,59 @@
+name: Python release tools
+description: Prepare and validate stable Python releases without importing caller package code.
+inputs:
+  operation:
+    description: prepare or validate
+    required: true
+  version-file:
+    description: Caller-relative file with __version__
+    required: true
+  changelog-file:
+    description: Changelog file
+    required: false
+    default: CHANGELOG.md
+  tag-prefix:
+    description: Tag prefix
+    required: false
+    default: v
+  tag:
+    description: Tag
+    required: false
+    default: ''
+  bump:
+    description: Bump
+    required: false
+    default: ''
+  dist-dir:
+    description: Dist dir
+    required: false
+    default: ''
+  package-name:
+    description: Expected PyPI project when checking distributions
+    required: false
+    default: ''
+  notes-file:
+    description: Notes file
+    required: false
+    default: ''
+outputs:
+  version:
+    description: Validated or prepared X.Y.Z version.
+    value: ${{ steps.release.outputs.version }}
+runs:
+  using: composite
+  steps:
+  - id: release
+    shell: bash
+    env:
+      OPERATION: ${{ inputs.operation }}
+      VERSION_FILE: ${{ inputs.version-file }}
+      CHANGELOG_FILE: ${{ inputs.changelog-file }}
+      TAG_PREFIX: ${{ inputs.tag-prefix }}
+      TAG: ${{ inputs.tag }}
+      BUMP: ${{ inputs.bump }}
+      DIST_DIR: ${{ inputs.dist-dir }}
+      PACKAGE_NAME: ${{ inputs.package-name }}
+      NOTES_FILE: ${{ inputs.notes-file }}
+    run: python "$GITHUB_ACTION_PATH/scripts/release.py" "$OPERATION" --root "$GITHUB_WORKSPACE" --version-file
+      "$VERSION_FILE" --changelog-file "$CHANGELOG_FILE" --tag-prefix "$TAG_PREFIX" --tag "$TAG" --bump "$BUMP"
+      --dist-dir "$DIST_DIR" --package-name "$PACKAGE_NAME" --notes-file "$NOTES_FILE"

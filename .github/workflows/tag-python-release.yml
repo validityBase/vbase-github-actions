@@ -1,0 +1,119 @@
+name: Tag merged release
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: tag-release-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+jobs:
+  tag:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == inputs.default-branch
+      && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref,
+      format('{0}{1}', inputs.release-branch-prefix, inputs.tag-prefix))
+    runs-on: ${{ inputs.runner }}
+    steps:
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        ref: ${{ github.event.pull_request.merge_commit_sha }}
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Check out pinned release tools
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        repository: validityBase/vbase-github-actions
+        ref: ${{ inputs.release-tools-ref }}
+        path: .release-tools
+        persist-credentials: false
+    - name: Read release tag
+      id: ref
+      env:
+        RELEASE_BRANCH: ${{ github.event.pull_request.head.ref }}
+        RELEASE_PREFIX: ${{ inputs.release-branch-prefix }}
+      run: 'tag="${RELEASE_BRANCH#"$RELEASE_PREFIX"}"
+
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"'
+    - name: Validate release
+      uses: ./.release-tools/.github/actions/python-release
+      with:
+        operation: validate
+        version-file: ${{ inputs.version-file }}
+        changelog-file: ${{ inputs.changelog-file }}
+        tag-prefix: ${{ inputs.tag-prefix }}
+        tag: ${{ steps.ref.outputs.tag }}
+    - name: Push release tag
+      env:
+        RELEASE_TAG: ${{ steps.ref.outputs.tag }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        AUTHOR_NAME: ${{ inputs.commit-author-name }}
+        AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
+      run: "git merge-base --is-ancestor HEAD \"origin/$DEFAULT_BRANCH\"\nif git show-ref --verify --quiet \"refs/tags/$RELEASE_TAG\"\
+        ; then\n  test \"$(git rev-parse \"refs/tags/$RELEASE_TAG^{commit}\")\" = \"$(git rev-parse HEAD)\" || {\n\
+        \    echo \"Tag $RELEASE_TAG already targets a different commit.\"\n    exit 1\n  }\nelse\n  git config\
+        \ user.name \"$AUTHOR_NAME\"\n  git config user.email \"$AUTHOR_EMAIL\"\n  git tag -a \"$RELEASE_TAG\" -m\
+        \ \"Release $RELEASE_TAG\"\n  git push origin \"refs/tags/$RELEASE_TAG\"\nfi"
+    - name: Dispatch publication (bot pushes do not trigger workflows)
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ steps.ref.outputs.tag }}
+        PUBLISH_WORKFLOW: ${{ inputs.publish-workflow }}
+      run: gh workflow run "$PUBLISH_WORKFLOW" --ref "$RELEASE_TAG"
+'on':
+  workflow_call:
+    inputs:
+      version-file:
+        description: Repository-relative file containing the literal __version__ assignment.
+        type: string
+        required: true
+      changelog-file:
+        description: Repository-relative Keep a Changelog file.
+        type: string
+        required: false
+        default: CHANGELOG.md
+      tag-prefix:
+        description: Prefix before stable X.Y.Z tags.
+        type: string
+        required: false
+        default: v
+      default-branch:
+        description: Branch from which releases are prepared and merged.
+        type: string
+        required: false
+        default: main
+      python-version:
+        description: Python version for release tooling.
+        type: string
+        required: false
+        default: '3.12'
+      runner:
+        description: GitHub-hosted Linux runner label.
+        type: string
+        required: false
+        default: ubuntu-24.04
+      release-tools-ref:
+        description: Shared-actions ref; match the reusable workflow ref when pinning a SHA.
+        type: string
+        required: false
+        default: v1
+      release-branch-prefix:
+        description: Release branch prefix before the version tag.
+        type: string
+        required: false
+        default: release/
+      commit-author-name:
+        description: Git author for automated commits and annotated tags.
+        type: string
+        required: false
+        default: github-actions[bot]
+      commit-author-email:
+        description: Public GitHub Actions bot address; override for another service identity.
+        type: string
+        required: false
+        default: 41898282+github-actions[bot]@users.noreply.github.com
+      publish-workflow:
+        description: Caller workflow file to dispatch after tagging.
+        type: string
+        required: false
+        default: publish-pypi.yml
