@@ -28,7 +28,7 @@ own.
 ## run-with-bitwarden-env
 
 Runs one caller-provided bash command with Bitwarden values supplied by the
-already installed `bw-sm` package. The action supports two mutually exclusive
+already installed `bw-sm` package. The action supports three mutually exclusive
 modes:
 
 - Single-project mode loads one project's values directly into the command
@@ -36,8 +36,10 @@ modes:
 - Env-file mode loads one or more projects into private temporary dotenv files,
   exposes each path through a caller-selected environment variable, runs the
   command, and removes all temporary files afterward.
+- Prepared-session mode reuses private dotenv files created once for the job by
+  `prepare-bitwarden-env` and does not call Bitwarden.
 
-Inputs required in both modes:
+Inputs required in all modes:
 
 - `command`: bash command to execute.
 - `working-directory`: defaults to `.` and must identify an existing directory.
@@ -60,6 +62,14 @@ Env-file mode input:
   command receives the generated dotenv file path. Values must be unique.
 - Each object may override `org-id` and `backend` for its project.
 
+Prepared-session mode input:
+
+- `session-manifest`: the output of `prepare-bitwarden-env`. It cannot be
+  combined with project selectors, `bitwarden-access-token`, or `projects-json`.
+- `load-env-file-variable`: optionally names one `env-file-variable` from the
+  manifest whose dotenv values should be loaded directly into the command
+  environment. The selected path variable is not exposed to the command.
+
 Shared optional inputs:
 
 - `org-id`: defaults to the vBase Bitwarden organization id.
@@ -67,6 +77,8 @@ Shared optional inputs:
 
 Caller workflows should install `bw-sm` and `bitwarden-sdk` through normal
 locked/private Python requirements before using the default `api` backend. The
+supported `bw-sm` revision must provide `bw_sm.env.parse_dotenv` so prepared
+commands use the canonical parser for the dotenv output. The
 action must not export Bitwarden secrets or generated paths through
 `$GITHUB_ENV`; they stay scoped to the command process. Generated files must be
 private and must be removed whether the command succeeds or fails. The
@@ -101,6 +113,61 @@ Example env-file mode configuration:
           "env-file-variable": "API_DOCKER_ENV_FILE"
         }
       ]
+    command: docker compose up --abort-on-container-exit
+```
+
+## prepare-bitwarden-env
+
+Loads all Bitwarden scopes needed by a job into owner-only dotenv files. Each
+distinct combination of backend, organization, project selector, and machine
+token is loaded once. Multiple `env-file-variable` entries may intentionally
+refer to that same file without making another provider request.
+
+Required input:
+
+- `projects-json`: the same project array accepted by the env-file mode of
+  `run-with-bitwarden-env`. Machine tokens are supplied through the named
+  environment variables and never embedded in JSON or the generated manifest.
+
+Optional inputs:
+
+- `org-id`: default organization for entries without an override.
+- `backend`: default backend, normally `api`.
+
+Output:
+
+- `session-manifest`: an owner-only path passed to subsequent
+  `run-with-bitwarden-env` steps.
+
+The action creates its session below `RUNNER_TEMP` with directory mode `0700`
+and file mode `0600`. The manifest contains only file paths and names of token
+environment variables that wrapped commands must remove; it contains no token
+or loaded secret values. A separate cleanup-only JavaScript post entrypoint
+validates the saved path before recursively removing the session on success,
+failure, or cancellation. Missing state is a no-op, so the post hook never
+starts a new session or contacts Bitwarden. Prepared commands
+validate file containment and permissions, remove machine-token variables from
+the child environment, parse values with the maintained `python-dotenv` library
+to construct command-scoped masks and, when requested, the command environment.
+They preserve the wrapped command's exit code and never evaluate dotenv content
+as shell code.
+
+Example:
+
+```yaml
+- name: Prepare Bitwarden env files
+  id: bitwarden
+  uses: validityBase/vbase-github-actions/.github/actions/prepare-bitwarden-env@v1
+  env:
+    APP_TOKEN: ${{ secrets.APP_TOKEN }}
+  with:
+    projects-json: >-
+      [{"project-id":"app-id","token-env":"APP_TOKEN","env-file-variable":"APP_ENV_FILE"}]
+
+- name: Run a prepared command
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  with:
+    session-manifest: ${{ steps.bitwarden.outputs.session-manifest }}
     command: docker compose up --abort-on-container-exit
 ```
 

@@ -3,12 +3,16 @@ name: Run with Bitwarden env tests
 on:
   pull_request:
     paths:
+      - ".github/actions/_bitwarden_runtime/**"
+      - ".github/actions/prepare-bitwarden-env/**"
       - ".github/actions/run-with-bitwarden-env/**"
       - ".github/workflows/run-with-bitwarden-env-tests.yml"
   push:
     branches:
       - main
     paths:
+      - ".github/actions/_bitwarden_runtime/**"
+      - ".github/actions/prepare-bitwarden-env/**"
       - ".github/actions/run-with-bitwarden-env/**"
       - ".github/workflows/run-with-bitwarden-env-tests.yml"
 
@@ -19,6 +23,8 @@ jobs:
   unit-tests:
     name: Bitwarden env action unit tests
     runs-on: ubuntu-24.04
+    env:
+      PYTHONPATH: .github/actions
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
@@ -29,8 +35,41 @@ jobs:
           python-version: "3.11"
 
       - name: Run unit tests
-        run: >-
-          python -m unittest discover
-          -s .github/actions/run-with-bitwarden-env/scripts
-          -p 'test_*.py'
-          -v
+        run: |
+          python -m unittest discover \
+            -s .github/actions/_bitwarden_runtime \
+            -p 'test_*.py' \
+            -v
+          python -m unittest discover \
+            -s .github/actions/run-with-bitwarden-env/scripts \
+            -p 'test_*.py' \
+            -v
+          python -m unittest discover \
+            -s .github/actions/prepare-bitwarden-env/scripts \
+            -p 'test_*.py' \
+            -v
+
+  node-tests:
+    name: Bitwarden session lifecycle tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: .github/actions/prepare-bitwarden-env
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # actions/checkout v5.0.1
+
+      - name: Set up Node.js and install dependencies
+        uses: ./.github/actions/setup-node-deps
+        with:
+          node-version: "24"
+          working-directory: .github/actions/prepare-bitwarden-env
+          package-lock-path: .github/actions/prepare-bitwarden-env/package-lock.json
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Verify bundled action
+        run: |
+          npm run build
+          git diff --exit-code -- dist/index.js
