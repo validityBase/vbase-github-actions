@@ -1,0 +1,123 @@
+name: Prepare release
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ${{ inputs.runner }}
+    steps:
+    - name: Require release branch
+      env:
+        RELEASE_REF: ${{ github.ref }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+      run: test "$RELEASE_REF" = "refs/heads/$DEFAULT_BRANCH"
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        ref: ${{ inputs.default-branch }}
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Check out pinned release tools
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        repository: validityBase/vbase-github-actions
+        ref: ${{ inputs.release-tools-ref }}
+        path: .release-tools
+        persist-credentials: false
+    - name: Require no open Release PR
+      env:
+        GH_TOKEN: ${{ github.token }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        RELEASE_PREFIX: ${{ inputs.release-branch-prefix }}
+      run: "branches=$(gh api --method GET --paginate \"repos/$GITHUB_REPOSITORY/pulls\" -f state=open -f base=\"\
+        $DEFAULT_BRANCH\" -f per_page=100 --jq '.[].head.ref')\nwhile IFS= read -r branch; do\n  if [[ \"$branch\"\
+        \ == \"$RELEASE_PREFIX\"* ]]; then\n    echo 'An open Release PR already exists.'\n    exit 1\n  fi\ndone\
+        \ <<< \"$branches\""
+    - id: version
+      name: Prepare release
+      uses: ./.release-tools/.github/actions/python-release
+      with:
+        operation: prepare
+        version-file: ${{ inputs.version-file }}
+        changelog-file: ${{ inputs.changelog-file }}
+        tag-prefix: ${{ inputs.tag-prefix }}
+        bump: ${{ inputs.bump }}
+        notes-file: ${{ runner.temp }}/release-pr.md
+    - name: Open Release PR
+      env:
+        GH_TOKEN: ${{ github.token }}
+        VERSION: ${{ steps.version.outputs.version }}
+        VERSION_FILE: ${{ inputs.version-file }}
+        CHANGELOG_FILE: ${{ inputs.changelog-file }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        RELEASE_PREFIX: ${{ inputs.release-branch-prefix }}
+        TAG_PREFIX: ${{ inputs.tag-prefix }}
+        AUTHOR_NAME: ${{ inputs.commit-author-name }}
+        AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
+      run: "tag=\"$TAG_PREFIX$VERSION\"\nbranch=\"$RELEASE_PREFIX$tag\"\nif git show-ref --verify --quiet \"refs/tags/$tag\"\
+        ; then\n  echo \"Tag $tag already exists.\"\n  exit 1\nfi\nif git show-ref --verify --quiet \"refs/remotes/origin/$branch\"\
+        ; then\n  echo \"Branch $branch already exists.\"\n  exit 1\nfi\ngit switch -c \"$branch\"\ngit config user.name\
+        \ \"$AUTHOR_NAME\"\ngit config user.email \"$AUTHOR_EMAIL\"\ngit add -- \"$VERSION_FILE\" \"$CHANGELOG_FILE\"\
+        \ngit commit -m \"Release $tag\"\ngit push origin \"HEAD:refs/heads/$branch\"\ngh pr create --base \"$DEFAULT_BRANCH\"\
+        \ --head \"$branch\" --title \"Release $tag\" --body-file \"$RUNNER_TEMP/release-pr.md\""
+'on':
+  workflow_call:
+    inputs:
+      bump:
+        description: Required patch, minor, or major version increment.
+        type: string
+        required: true
+      version-file:
+        description: Repository-relative file containing the literal __version__ assignment.
+        type: string
+        required: true
+      changelog-file:
+        description: Repository-relative Keep a Changelog file.
+        type: string
+        required: false
+        default: CHANGELOG.md
+      tag-prefix:
+        description: Prefix before stable X.Y.Z tags.
+        type: string
+        required: false
+        default: v
+      default-branch:
+        description: Branch from which releases are prepared and merged.
+        type: string
+        required: false
+        default: main
+      python-version:
+        description: Python version for release tooling.
+        type: string
+        required: false
+        default: '3.12'
+      runner:
+        description: GitHub-hosted Linux runner label.
+        type: string
+        required: false
+        default: ubuntu-24.04
+      release-tools-ref:
+        description: Shared-actions ref; match the reusable workflow ref when pinning a SHA.
+        type: string
+        required: false
+        default: v1
+      release-branch-prefix:
+        description: Release branch prefix before the version tag.
+        type: string
+        required: false
+        default: release/
+      commit-author-name:
+        description: Git author for automated commits and annotated tags.
+        type: string
+        required: false
+        default: github-actions[bot]
+      commit-author-email:
+        description: Public GitHub Actions bot address; override for another service identity.
+        type: string
+        required: false
+        default: 41898282+github-actions[bot]@users.noreply.github.com

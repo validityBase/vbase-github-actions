@@ -1,0 +1,31 @@
+name: Create Python GitHub Release
+'on':
+  workflow_call:
+    inputs:
+      runner:
+        description: GitHub-hosted Linux runner label.
+        type: string
+        required: false
+        default: ubuntu-24.04
+      notes-artifact-name:
+        description: Changelog notes artifact name.
+        type: string
+        required: false
+        default: python-release-notes
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ${{ inputs.runner }}
+    steps:
+    - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      with:
+        name: ${{ inputs.notes-artifact-name }}
+        path: ${{ runner.temp }}/release-notes
+    - name: Create release from validated changelog notes
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes-file
+        "$RUNNER_TEMP/release-notes/release-notes.md"
