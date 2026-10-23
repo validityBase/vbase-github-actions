@@ -5,7 +5,7 @@
   "description": "Prepare private Bitwarden dotenv files for one GitHub Actions job",
   "main": "src/index.js",
   "scripts": {
-    "build": "ncc build src/index.js -o dist --minify",
+    "build": "ncc build src/index.js -o dist --minify && ncc build src/post.js -o dist/post --minify",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {

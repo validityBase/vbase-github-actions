@@ -142,9 +142,10 @@ Output:
 The action creates its session below `RUNNER_TEMP` with directory mode `0700`
 and file mode `0600`. The manifest contains only file paths and names of token
 environment variables that wrapped commands must remove; it contains no token
-or loaded secret values. The JavaScript post-job hook validates the saved path
-before recursively removing the session on success, failure, or cancellation.
-Cleanup reads only local state and never contacts Bitwarden. Prepared commands
+or loaded secret values. A separate cleanup-only JavaScript post entrypoint
+validates the saved path before recursively removing the session on success,
+failure, or cancellation. Missing state is a no-op, so the post hook never
+starts a new session or contacts Bitwarden. Prepared commands
 validate file containment and permissions, remove machine-token variables from
 the child environment, parse values with the maintained `python-dotenv` library
 to construct command-scoped masks and, when requested, the command environment.

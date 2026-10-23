@@ -13,7 +13,7 @@ const action = createAction({
 });
 
 try {
-  action.run();
+  action.prepare();
 } catch (error) {
   core.setFailed(error instanceof Error ? error.message : String(error));
 }

@@ -41,7 +41,7 @@ test("main prepares output and post removes it without another subprocess", () =
       environment,
     });
 
-    action.run();
+    action.prepare();
 
     const sessionDirectory = core.state.get(SESSION_STATE);
     assert.equal(fs.existsSync(sessionDirectory), true);
@@ -54,7 +54,7 @@ test("main prepares output and post removes it without another subprocess", () =
     assert.equal(calls[0][1][0], "/action/scripts/prepare_session.py");
     assert.equal(calls[0][2].env.BTENV_SESSION_DIRECTORY, sessionDirectory);
 
-    action.run();
+    action.cleanup();
 
     assert.equal(fs.existsSync(sessionDirectory), false);
     assert.equal(calls.length, 1);
@@ -77,11 +77,47 @@ test("failed preparation removes the partial session immediately", () => {
     });
 
     assert.throws(
-      () => action.run(),
+      () => action.prepare(),
       /Bitwarden session preparation failed with exit code 17/,
     );
     assert.equal(fs.existsSync(core.state.get(SESSION_STATE)), false);
   } finally {
     fs.rmSync(runnerTemp, { recursive: true, force: true });
   }
+});
+
+test("post cleanup is a no-op when main fails before saving state", () => {
+  const core = fakeCore({ backend: "api", "projects-json": "[]" });
+  let createCalls = 0;
+  let removeCalls = 0;
+  let spawnCalls = 0;
+  const action = createAction({
+    core,
+    spawnSync: () => {
+      spawnCalls += 1;
+      return { status: 0 };
+    },
+    session: {
+      createSessionDirectory: () => {
+        createCalls += 1;
+        throw new Error("cannot create session directory");
+      },
+      removeSessionDirectory: () => {
+        removeCalls += 1;
+      },
+    },
+    actionDirectory: "/action",
+    environment: {},
+  });
+
+  assert.throws(
+    () => action.prepare(),
+    /cannot create session directory/,
+  );
+  action.cleanup();
+
+  assert.equal(core.state.has(SESSION_STATE), false);
+  assert.equal(createCalls, 1);
+  assert.equal(removeCalls, 0);
+  assert.equal(spawnCalls, 0);
 });

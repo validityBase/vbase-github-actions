@@ -43,15 +43,7 @@ function createAction({ core, spawnSync, session, actionDirectory, environment }
     }
   }
 
-  function run() {
-    if (core.getState(SESSION_STATE)) {
-      cleanup();
-    } else {
-      prepare();
-    }
-  }
-
-  return { cleanup, prepare, run };
+  return { cleanup, prepare };
 }
 
 module.exports = { createAction, SESSION_STATE };
