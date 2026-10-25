@@ -63,6 +63,11 @@ Using matching refs prevents a new workflow from running older helper code.
 Production consumers may instead use a reviewed release ref such as `v1` for
 both values after the new components are available on that release line.
 
+The helper uses only Python's standard library, including the
+[PyPA name-normalization rule](https://packaging.python.org/en/latest/specifications/name-normalization/).
+Preparation and tagging do not install third-party dependencies; an importable
+`packaging` distribution is not a prerequisite.
+
 ## Caller example
 
 ```yaml
@@ -119,7 +124,7 @@ move the upload into a reusable workflow or add a static PyPI token.
 python -m unittest discover -s .github/actions/python-release/tests -v
 ```
 
-Tests cover both `src/vbase_api/_version.py` and `vbase/_version.py` layouts,
+Tests cover both src and flat package layouts,
 alternate changelog paths/tag prefixes, component resets, unchanged files on
 invalid input, path escapes, and wheel/sdist metadata matching. Preparation
 requires real entries under Unreleased. User impact is reviewed by maintainers;

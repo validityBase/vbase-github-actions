@@ -23,6 +23,7 @@ def repository_file(root: Path, relative: str) -> Path:
 
 
 def normalized_name(name: str) -> str:
+    # PyPA name normalization; prepare/tag run without third-party dependencies.
     return re.sub(r"[-_.]+", "-", name).lower()
 
 

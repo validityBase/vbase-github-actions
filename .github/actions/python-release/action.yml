@@ -2,37 +2,37 @@ name: Python release tools
 description: Prepare and validate stable Python releases without importing caller package code.
 inputs:
   operation:
-    description: prepare or validate
+    description: Operation to run; choose prepare to update version and changelog, or validate to check an existing release.
     required: true
   version-file:
-    description: Caller-relative file with __version__
+    description: Repository-relative Python file containing one literal __version__ assignment.
     required: true
   changelog-file:
-    description: Changelog file
+    description: Repository-relative Keep a Changelog file, starting with an [Unreleased] section.
     required: false
     default: CHANGELOG.md
   tag-prefix:
-    description: Tag prefix
+    description: Prefix before stable X.Y.Z tags; defaults to v.
     required: false
     default: v
   tag:
-    description: Tag
+    description: Stable tag to validate, such as v1.2.3; required for validate and must match tag-prefix and the source version. Prereleases are rejected.
     required: false
     default: ''
   bump:
-    description: Bump
+    description: Version increment to apply during prepare; required for prepare and must be patch, minor, or major.
     required: false
     default: ''
   dist-dir:
-    description: Dist dir
+    description: Directory containing exactly one wheel and one source tarball to validate; leave empty to skip distribution checks. Requires package-name.
     required: false
     default: ''
   package-name:
-    description: Expected PyPI project when checking distributions
+    description: Expected PyPI distribution name when dist-dir is supplied; names are compared using Python package name normalization.
     required: false
     default: ''
   notes-file:
-    description: Notes file
+    description: Optional output path for extracted release notes or the generated Release PR body; may be outside the repository.
     required: false
     default: ''
 outputs:
