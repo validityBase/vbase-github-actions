@@ -99,14 +99,17 @@ the repository checkout from shadowing the installed package.
 ## Manual publication
 
 For an approved manual publication, use the package repository's workflow
-and an existing release tag containing the release integration:
+on the default branch and supply an existing release tag:
 
 ```bash
-gh workflow run publish-pypi.yml --repo OWNER/REPOSITORY --ref RELEASE_TAG
+gh workflow run publish-pypi.yml --repo OWNER/REPOSITORY --ref main -f release-tag=RELEASE_TAG
 ```
 
 Replace the repository and tag placeholders before running the command. Manual
-runs use the same validation, and branch refs are rejected. Do not dispatch a
+runs check out the existing tag and use the same validation. This also allows
+a corrected workflow on `main` to publish an unpublished tag without moving it.
+The caller must expose and forward the `release-tag` input to the build and
+GitHub Release workflows. Do not dispatch a
 version that is already published to PyPI.
 
 Configuration inputs and defaults are documented in the

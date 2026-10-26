@@ -210,12 +210,13 @@ retrying a rejected push only when the remote branch has advanced, with a
 bounded number of attempts. If the remote already contains the local commit,
 the publish is considered successful.
 
-## python-release and publish-python-release
+## python-release
 
 `python-release` prepares or validates stable releases using caller-provided
 version/changelog paths and PyPI names. Paths must remain inside the caller
 checkout; package code is never imported for version extraction.
-`publish-python-release` downloads the validated distribution artifact and
-executes OIDC publication in the caller-owned upload job. See the
+The caller downloads the validated artifact and invokes the pinned PyPA
+publisher directly in its OIDC upload job. The nested `publish-python-release`
+wrapper is removed because it resolves the wrong Docker image. See the
 [release contract](../../.github/actions/python-release/README.md) for inputs,
 defaults, identity configuration, and tests.

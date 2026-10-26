@@ -2,6 +2,11 @@ name: Build Python release
 'on':
   workflow_call:
     inputs:
+      release-tag:
+        description: Existing tag to publish when manually dispatched from the default branch; empty uses the triggering tag.
+        type: string
+        required: false
+        default: ''
       package-name:
         description: Expected PyPI distribution name.
         type: string
@@ -70,9 +75,21 @@ jobs:
     - name: Require a release tag
       env:
         REF_TYPE: ${{ github.ref_type }}
-      run: test "$REF_TYPE" = tag
+        REF: ${{ github.ref }}
+        EVENT_NAME: ${{ github.event_name }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+      run: |
+        if [ -n "$RELEASE_TAG" ]; then
+          test "$EVENT_NAME" = workflow_dispatch
+          test "$REF" = "refs/heads/$DEFAULT_BRANCH"
+          git check-ref-format "refs/tags/$RELEASE_TAG"
+        else
+          test "$REF_TYPE" = tag
+        fi
     - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
+        ref: ${{ inputs.release-tag && format('refs/tags/{0}', inputs.release-tag) || github.ref }}
         fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
@@ -96,7 +113,7 @@ jobs:
         version-file: ${{ inputs.version-file }}
         changelog-file: ${{ inputs.changelog-file }}
         tag-prefix: ${{ inputs.tag-prefix }}
-        tag: ${{ github.ref_name }}
+        tag: ${{ inputs.release-tag || github.ref_name }}
         notes-file: ${{ runner.temp }}/release-notes.md
     - name: Install build tools
       run: 'read -r -a requirements <<< "$BUILD_REQUIREMENTS"
@@ -117,7 +134,7 @@ jobs:
         version-file: ${{ inputs.version-file }}
         changelog-file: ${{ inputs.changelog-file }}
         tag-prefix: ${{ inputs.tag-prefix }}
-        tag: ${{ github.ref_name }}
+        tag: ${{ inputs.release-tag || github.ref_name }}
         dist-dir: ${{ inputs.dist-dir }}
         package-name: ${{ inputs.package-name }}
     - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
