@@ -7,7 +7,7 @@ import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
 from _bitwarden_runtime.project_files import ENV_KEY_PATTERN
 SESSION_VERSION = 1
@@ -124,21 +124,24 @@ def load_session_manifest(path: Path) -> PreparedSession:
     return PreparedSession(env_files, frozenset(raw_remove_env))
 
 
-def read_dotenv(path: Path) -> dict[str, str]:
+def read_dotenv(
+    path: Path, *, _parser: Callable[[str], dict[str, str]] | None = None
+) -> dict[str, str]:
     """Read one canonical bw-sm dotenv file without evaluating shell code."""
     try:
         content = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise SessionError(f"Unable to read prepared env file: {path}") from exc
 
-    try:
-        from bw_sm.env import parse_dotenv
-    except ImportError as exc:
-        raise SessionError(
-            "Installed bw-sm does not provide the canonical dotenv parser"
-        ) from exc
+    if _parser is None:
+        try:
+            from bw_sm.env import parse_dotenv as _parser
+        except ImportError as exc:
+            raise SessionError(
+                "Installed bw-sm does not provide the canonical dotenv parser"
+            ) from exc
 
     try:
-        return parse_dotenv(content)
+        return _parser(content)
     except ValueError as exc:
         raise SessionError(f"Prepared dotenv file has invalid content: {path}") from exc
