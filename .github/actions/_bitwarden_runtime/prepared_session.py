@@ -92,14 +92,16 @@ def load_session_manifest(path: Path) -> PreparedSession:
     except (OSError, json.JSONDecodeError) as exc:
         raise SessionError(f"Unable to read prepared session manifest: {path}") from exc
 
-    if not isinstance(payload, dict) or set(payload) != {
+    if not isinstance(payload, dict) or "version" not in payload:
+        raise SessionError("Prepared session manifest has an unexpected format")
+    if payload["version"] != SESSION_VERSION:
+        raise SessionError("Prepared session manifest version is unsupported")
+    if set(payload) != {
         "version",
         "env-files",
         "remove-env",
     }:
         raise SessionError("Prepared session manifest has an unexpected format")
-    if payload["version"] != SESSION_VERSION:
-        raise SessionError("Prepared session manifest version is unsupported")
     raw_env_files = payload["env-files"]
     if not isinstance(raw_env_files, dict) or not raw_env_files:
         raise SessionError("Prepared session manifest has no env files")

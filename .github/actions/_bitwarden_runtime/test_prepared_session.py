@@ -110,6 +110,43 @@ class PreparedSessionTests(unittest.TestCase):
             ):
                 prepared_session.load_session_manifest(manifest)
 
+    def test_rejects_newer_manifest_schema_as_unsupported_version(self) -> None:
+        """A newer schema reports its unsupported version before its fields."""
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory, "session.json")
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "version": 2,
+                        "env-files": {},
+                        "remove-env": [],
+                        "future-field": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            manifest.chmod(0o600)
+
+            with self.assertRaisesRegex(
+                prepared_session.SessionError, "version is unsupported"
+            ):
+                prepared_session.load_session_manifest(manifest)
+
+    def test_rejects_manifest_without_version_as_unexpected_format(self) -> None:
+        """A malformed manifest is not misreported as a newer schema."""
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory, "session.json")
+            manifest.write_text(
+                json.dumps({"env-files": {}, "remove-env": []}),
+                encoding="utf-8",
+            )
+            manifest.chmod(0o600)
+
+            with self.assertRaisesRegex(
+                prepared_session.SessionError, "unexpected format"
+            ):
+                prepared_session.load_session_manifest(manifest)
+
     def test_rejects_non_private_session_directory(self) -> None:
         """Other users must not be able to traverse the prepared session."""
         with tempfile.TemporaryDirectory() as directory:
