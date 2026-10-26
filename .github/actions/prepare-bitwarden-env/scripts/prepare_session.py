@@ -39,11 +39,24 @@ def _scope_key(
 
 def _require_private_output(path: Path) -> None:
     """Ensure the provider created a private regular file at the requested path."""
-    if path.is_symlink() or not path.is_file():
-        raise ConfigurationError(f"Bitwarden did not create a regular env file: {path}")
-    path.chmod(0o600)
-    if stat.S_IMODE(path.stat().st_mode) != 0o600:
-        raise ConfigurationError(f"Unable to make Bitwarden env file private: {path}")
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    except OSError as exc:
+        raise ConfigurationError(
+            f"Bitwarden did not create a regular env file: {path}"
+        ) from exc
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ConfigurationError(
+                f"Bitwarden did not create a regular env file: {path}"
+            )
+        os.fchmod(descriptor, 0o600)
+        if stat.S_IMODE(os.fstat(descriptor).st_mode) != 0o600:
+            raise ConfigurationError(
+                f"Unable to make Bitwarden env file private: {path}"
+            )
+    finally:
+        os.close(descriptor)
 
 
 def prepare_session(

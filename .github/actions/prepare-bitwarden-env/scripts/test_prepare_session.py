@@ -14,6 +14,31 @@ import prepare_session
 class PrepareSessionTests(unittest.TestCase):
     """Load each distinct provider scope once into private files."""
 
+    def test_private_output_rejects_symlink_without_changing_target(self) -> None:
+        """A provider-created link must not redirect the permission change."""
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory, "target.env")
+            target.write_text('VALUE="secret"\n', encoding="utf-8")
+            target.chmod(0o644)
+            output = Path(directory, "project.env")
+            output.symlink_to(target)
+
+            with self.assertRaises(prepare_session.ConfigurationError):
+                prepare_session._require_private_output(output)
+
+            self.assertEqual(0o644, target.stat().st_mode & 0o777)
+
+    def test_private_output_sets_owner_only_permissions(self) -> None:
+        """A regular provider output becomes readable only by its owner."""
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory, "project.env")
+            output.write_text('VALUE="secret"\n', encoding="utf-8")
+            output.chmod(0o644)
+
+            prepare_session._require_private_output(output)
+
+            self.assertEqual(0o600, output.stat().st_mode & 0o777)
+
     @mock.patch.object(prepare_session, "dump_project")
     def test_deduplicates_scopes_and_writes_non_secret_manifest(
         self, dump_mock: mock.Mock
