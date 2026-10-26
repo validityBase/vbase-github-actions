@@ -24,7 +24,10 @@ from _bitwarden_runtime.scoped_output import ScopedMaskFilter  # noqa: E402
 def _scope_key(
     project: ProjectConfig, environ: Mapping[str, str]
 ) -> tuple[str, str | None, str | None, str | None, str]:
-    """Identify one provider request without persisting its access token."""
+    """Deduplicate provider calls by scope and token held in memory.
+
+    The token is never written to the session manifest.
+    """
     return (
         project.backend,
         project.organization_id,
