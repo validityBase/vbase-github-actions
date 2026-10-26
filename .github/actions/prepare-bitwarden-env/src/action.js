@@ -17,7 +17,7 @@ function createAction({ core, spawnSync, session, actionDirectory, environment }
     const manifestPath = path.join(sessionDirectory, "session.json");
     const helper = path.join(actionDirectory, "scripts", "prepare_session.py");
     try {
-      const result = spawnSync("python", [helper], {
+      const result = spawnSync("python3", [helper], {
         env: {
           ...environment,
           BTENV_BACKEND: core.getInput("backend", { required: true }),

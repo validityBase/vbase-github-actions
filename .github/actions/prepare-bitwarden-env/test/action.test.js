@@ -50,7 +50,7 @@ test("main prepares output and post removes it without another subprocess", () =
       path.join(sessionDirectory, "session.json"),
     );
     assert.equal(calls.length, 1);
-    assert.equal(calls[0][0], "python");
+    assert.equal(calls[0][0], "python3");
     assert.equal(calls[0][1][0], "/action/scripts/prepare_session.py");
     assert.equal(calls[0][2].env.BTENV_SESSION_DIRECTORY, sessionDirectory);
 
