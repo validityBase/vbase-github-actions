@@ -98,3 +98,14 @@ Known local workflow variants:
 - C# docs require MSBuild plus a repository-local markdown patch script;
 - `vbase-django-tools` generates OpenAPI markdown on Windows before publishing;
 - some sample repositories publish existing `docs/` without a build step.
+
+## Python release workflows
+
+`prepare-python-release.yml`, `tag-python-release.yml`,
+`build-python-release.yml`, and `github-python-release.yml` centralize the
+release process. Callers keep event triggers and the OIDC upload job. Required
+inputs are version-file, preparation bump, and the build package-name; optional
+settings and service-account defaults are listed in the
+[release contract](../../.github/actions/python-release/README.md).
+When pinning a workflow SHA, release-tools-ref must match it. Existing unrelated
+workflows are unchanged. Run shared release tests on Python 3.11 and 3.12.

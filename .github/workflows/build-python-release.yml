@@ -1,0 +1,132 @@
+name: Build Python release
+'on':
+  workflow_call:
+    inputs:
+      package-name:
+        description: Expected PyPI distribution name.
+        type: string
+        required: true
+      version-file:
+        description: Repository-relative file containing the literal __version__ assignment.
+        type: string
+        required: true
+      changelog-file:
+        description: Repository-relative Keep a Changelog file.
+        type: string
+        required: false
+        default: CHANGELOG.md
+      tag-prefix:
+        description: Prefix before stable X.Y.Z tags.
+        type: string
+        required: false
+        default: v
+      default-branch:
+        description: Branch from which releases are prepared and merged.
+        type: string
+        required: false
+        default: main
+      python-version:
+        description: Python version for release tooling.
+        type: string
+        required: false
+        default: '3.12'
+      runner:
+        description: GitHub-hosted Linux runner label.
+        type: string
+        required: false
+        default: ubuntu-24.04
+      release-tools-ref:
+        description: Shared-actions ref; match the reusable workflow ref when pinning a SHA.
+        type: string
+        required: false
+        default: v1
+      dist-dir:
+        description: Distribution output directory.
+        type: string
+        required: false
+        default: dist
+      artifact-name:
+        description: Distribution artifact name.
+        type: string
+        required: false
+        default: python-package-distributions
+      notes-artifact-name:
+        description: Changelog notes artifact name.
+        type: string
+        required: false
+        default: python-release-notes
+      build-requirements:
+        description: Space-separated build tool requirements; version specifiers may be supplied.
+        type: string
+        required: false
+        default: build twine
+permissions:
+  contents: read
+  actions: write
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    steps:
+    - name: Require a release tag
+      env:
+        REF_TYPE: ${{ github.ref_type }}
+      run: test "$REF_TYPE" = tag
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Check out pinned release tools
+      uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      with:
+        repository: validityBase/vbase-github-actions
+        ref: ${{ inputs.release-tools-ref }}
+        path: .release-tools
+        persist-credentials: false
+    - name: Require merged commit
+      env:
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+      run: git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
+    - name: Validate release
+      uses: ./.release-tools/.github/actions/python-release
+      with:
+        operation: validate
+        version-file: ${{ inputs.version-file }}
+        changelog-file: ${{ inputs.changelog-file }}
+        tag-prefix: ${{ inputs.tag-prefix }}
+        tag: ${{ github.ref_name }}
+        notes-file: ${{ runner.temp }}/release-notes.md
+    - name: Install build tools
+      run: 'read -r -a requirements <<< "$BUILD_REQUIREMENTS"
+
+        python -m pip install --upgrade "${requirements[@]}"'
+      env:
+        BUILD_REQUIREMENTS: ${{ inputs.build-requirements }}
+    - name: Build and check distributions
+      env:
+        DIST_DIR: ${{ inputs.dist-dir }}
+      run: 'python -m build --outdir "$DIST_DIR"
+
+        python -m twine check "$DIST_DIR"/*'
+    - name: Validate release
+      uses: ./.release-tools/.github/actions/python-release
+      with:
+        operation: validate
+        version-file: ${{ inputs.version-file }}
+        changelog-file: ${{ inputs.changelog-file }}
+        tag-prefix: ${{ inputs.tag-prefix }}
+        tag: ${{ github.ref_name }}
+        dist-dir: ${{ inputs.dist-dir }}
+        package-name: ${{ inputs.package-name }}
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.dist-dir }}
+        if-no-files-found: error
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+      with:
+        name: ${{ inputs.notes-artifact-name }}
+        path: ${{ runner.temp }}/release-notes.md
+        if-no-files-found: error
