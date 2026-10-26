@@ -13,7 +13,6 @@ create a GitHub Release from the validated changelog notes.
 | `build-python-release.yml` | Validate the tag/source/changelog, build and inspect wheel/sdist metadata, and store distributions and release notes as artifacts |
 | `github-python-release.yml` | Create the GitHub Release from the notes artifact after publication succeeds |
 | `python-release/action.yml` | Focused prepare/validate helper using Python's standard library |
-| `publish-python-release/action.yml` | Download the validated distributions and upload them using OIDC in a caller-owned job |
 
 Workflows live in `.github/workflows/`; actions live in `.github/actions/`.
 The caller owns event triggers, permissions, and the `pypi` environment. A
@@ -36,6 +35,7 @@ Optional inputs are exposed only by the workflows that use them:
 
 | Input | Default |
 | --- | --- |
+| `release-tag` | Empty (use triggering tag); existing tag for manual publication from the default branch |
 | `changelog-file` | `CHANGELOG.md` |
 | `default-branch` | `main` |
 | `release-branch-prefix` | `release/` |
@@ -96,8 +96,10 @@ workflow's group: both levels would compete for the same lock.
 ## Trusted publishing
 
 Keep the upload job in the caller workflow registered with PyPI. PyPI does not
-currently support a reusable workflow as the Trusted Publisher. This composite
-action executes inside the caller's upload job and preserves that identity:
+currently support a reusable workflow as the Trusted Publisher. Call the PyPA
+publisher directly: nesting it inside a composite can resolve the outer action's
+repository and SHA when selecting its Docker image. The former
+`publish-python-release` wrapper has been removed; replace it with these steps:
 
 ```yaml
 publish-to-pypi:
@@ -110,13 +112,26 @@ publish-to-pypi:
     id-token: write
     actions: read
   steps:
-    - uses: validityBase/vbase-github-actions/.github/actions/publish-python-release@v1
+    - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+      with:
+        name: python-package-distributions
+        path: dist
+    - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
+      with:
+        packages-dir: dist
 ```
 
 The preceding build job calls `build-python-release.yml`; the following release
 job calls `github-python-release.yml` with `needs: publish-to-pypi`. Preserve
 these dependencies: a failed upload must not create a GitHub Release. Do not
 move the upload into a reusable workflow or add a static PyPI token.
+
+For manual publication from the default branch, pass the same `release-tag` to
+both build and GitHub Release workflows. Key caller concurrency by the selected
+full tag ref (`refs/tags/<tag>`) so manual and tag-triggered runs share a lock.
+The build checks out that existing tag and retains all validation. An explicit
+tag is accepted only on manual dispatch from the configured default branch;
+without it, the triggering ref must be a tag.
 
 ## Validation
 

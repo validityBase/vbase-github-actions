@@ -295,4 +295,4 @@ and `cmd`.
 Maintainer steps are in [RELEASE_MANAGEMENT.md](RELEASE_MANAGEMENT.md).
 Shared preparation, tagging, distribution validation, and GitHub Release
 workflows are documented in the [Python release guide](.github/actions/python-release/README.md).
-The OIDC upload uses a composite action inside the caller-owned publishing job.
+The OIDC upload invokes the pinned PyPA publisher directly in the caller-owned publishing job.

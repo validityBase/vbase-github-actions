@@ -2,6 +2,11 @@ name: Create Python GitHub Release
 'on':
   workflow_call:
     inputs:
+      release-tag:
+        description: Validated release tag from the build job; empty uses the triggering tag.
+        type: string
+        required: false
+        default: ''
       runner:
         description: GitHub-hosted Linux runner label.
         type: string
@@ -26,6 +31,6 @@ jobs:
     - name: Create release from validated changelog notes
       env:
         GH_TOKEN: ${{ github.token }}
-        RELEASE_TAG: ${{ github.ref_name }}
+        RELEASE_TAG: ${{ inputs.release-tag || github.ref_name }}
       run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes-file
         "$RUNNER_TEMP/release-notes/release-notes.md"
