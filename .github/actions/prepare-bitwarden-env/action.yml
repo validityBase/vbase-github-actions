@@ -1,0 +1,30 @@
+name: Prepare Bitwarden env
+description: >
+  Load Bitwarden projects once into private job-lifetime dotenv files for
+  reuse by run-with-bitwarden-env.
+# cspell:ignore btenv
+
+inputs:
+  projects-json:
+    description: >
+      JSON array of projects. Each entry requires project or project-id,
+      token-env, and env-file-variable.
+    required: true
+  org-id:
+    description: Default Bitwarden organization id.
+    required: false
+    default: f8c92883-7bb9-4d29-a2d4-b137014f77af
+  backend:
+    description: Default Bitwarden backend passed to bw_sm.env.
+    required: false
+    default: api
+
+outputs:
+  session-manifest:
+    description: Private manifest path for run-with-bitwarden-env.
+
+runs:
+  using: node24
+  main: dist/index.js
+  post: dist/post/index.js
+  post-if: always()

@@ -29,6 +29,8 @@ Actions and reusable workflows.
 - `.github/actions/setup-cypress-deps/action.yml`
 - `.github/actions/notifications/action.yml`
 - `.github/actions/publish-docs/action.yml`
+- `.github/actions/prepare-bitwarden-env/action.yml`
+- `.github/actions/run-with-bitwarden-env/action.yml`
 
 ## Current Reusable Workflows
 

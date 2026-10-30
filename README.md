@@ -69,8 +69,49 @@ Use `project-id` instead of `project` when the workflow should avoid resolving
 by name. Install `bw-sm` and `bitwarden-sdk` through normal locked/private
 Python requirements before this action. The action keeps Bitwarden secrets
 scoped to the command step instead of exporting them to later workflow steps.
+Prepared-session mode requires a reviewed `bw-sm` revision that provides the
+canonical `bw_sm.env.parse_dotenv` parser.
+Set `load-env-file-variable` to one manifest key when that project's values
+must be injected into the command environment instead of exposed as a dotenv
+file path.
 See [the shared actions spec](internal/specs/actions.md#run-with-bitwarden-env)
 for the canonical multi-project env-file interface and example.
+
+When multiple workflow steps need the same projects, prepare them once for the
+job and pass the resulting manifest to each command:
+
+```yaml
+- name: Prepare Bitwarden env files
+  id: bitwarden
+  uses: validityBase/vbase-github-actions/.github/actions/prepare-bitwarden-env@v1
+  env:
+    APP_TOKEN: ${{ secrets.APP_TOKEN }}
+    API_TOKEN: ${{ secrets.API_TOKEN }}
+  with:
+    projects-json: >-
+      [
+        {"project-id":"app-id","token-env":"APP_TOKEN","env-file-variable":"APP_ENV_FILE"},
+        {"project-id":"api-id","token-env":"API_TOKEN","env-file-variable":"API_ENV_FILE"}
+      ]
+
+- name: Start services
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  with:
+    session-manifest: ${{ steps.bitwarden.outputs.session-manifest }}
+    command: docker compose up -d
+
+- name: Run tests
+  uses: validityBase/vbase-github-actions/.github/actions/run-with-bitwarden-env@v1
+  with:
+    session-manifest: ${{ steps.bitwarden.outputs.session-manifest }}
+    command: python -m unittest discover -s tests -v
+```
+
+The prepare action loads each distinct token/project scope once, even when the
+JSON maps it to multiple env-file variables. Its post-job hook removes the
+private files after success, failure, or cancellation. Reused commands keep
+machine tokens out of their child environments and apply masking only while
+their output is streamed.
 
 ### setup-node-deps
 
