@@ -57,6 +57,38 @@ Important inputs:
 - `pylint-command` defaults to `pylint $(git ls-files '*.py')`.
 - `working-directory` defaults to the repository root.
 
+## regenerate-dependabot-locks.yml
+
+Opt-in repair for duplicate hashes in pip-compile locks. A maintainer with
+repository write access adds `regenerate-locks` to an open, same-repository
+Dependabot pip PR. The caller listens for `pull_request_target: labeled` and
+passes only read permissions to the reusable workflow. To retry, remove and
+reapply the label.
+
+- `lock-files`: space-separated basenames for matching
+  `requirements/<name>.in` and `.txt` files.
+- `allow-unsafe-lock-files`: subset compiled with `--allow-unsafe`.
+- `python-version` and `tooling-lock`: Python version and hash-locked tooling
+  basename under `requirements/`; default to `3.11` and `tools`.
+- `compile-profile`: `standard` (default), or `linux-wheel-cp311` for the
+  binary-only manylinux2014 x86-64 / CPython 3.11 settings used by the pilot.
+- Pass a repository-scoped GitHub App's client ID and private key as
+  `app-client-id` and `app-private-key`. The installation needs Contents:
+  write. Do not pass any other secrets.
+
+Regeneration has no write credentials. The separate publish job does not
+check out the PR. It loads its validator from the reusable workflow's own
+commit and only commits a result that exactly matches deleting
+duplicate SHA-256 entries from the event head's locks. In the Linux profile it
+may also restore the `--only-binary :all:` header option if the base lock
+already has it. That option alone never triggers a commit. A moved head,
+missing label, or wider diff prevents the commit. The App commit triggers
+regular CI.
+
+The regeneration job uses the pinned Python setup action directly because
+`setup-python-deps` enables a shared pip cache. Do not enable a shared
+cache for dependency resolution based on pull request files.
+
 ## publish-docs.yml
 
 `publish-docs.yml` standardizes the common documentation publishing skeleton:
