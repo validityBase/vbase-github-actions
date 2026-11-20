@@ -59,6 +59,32 @@ Important inputs:
 - `pylint-command` defaults to `pylint $(git ls-files '*.py')`.
 - `working-directory` defaults to the repository root.
 
+## regenerate-dependabot-locks.yml
+
+Opt-in repair for duplicate hashes in pip-compile locks. A maintainer with
+repository write access adds `regenerate-locks` to an open, same-repository
+Dependabot pip PR. The caller listens for `pull_request_target: labeled` and
+passes only read permissions to the reusable workflow. To retry, remove and
+reapply the label.
+
+- `lock-files`: space-separated names from `base`, `dev`, and `tools`.
+  Each needs a matching `requirements/<name>.in` and `.txt`, with tooling
+  installed from the hash-locked `requirements/tools.txt`. The supported
+  layout uses Python 3.11 and `--allow-unsafe` for `dev` and `tools`.
+- Pass a repository-scoped GitHub App's client ID and private key as
+  `app-client-id` and `app-private-key`. The installation needs Contents:
+  write. Do not pass any other secrets.
+
+Regeneration has no write credentials. The separate publish job does not
+check out the PR and only commits a result that exactly matches deleting
+duplicate SHA-256 entries from the event head's locks. A moved head, missing
+label, or wider diff prevents the commit; a clean result is a no-op. The App
+commit triggers regular CI.
+
+The regeneration job uses the pinned Python setup action directly because
+`setup-python-deps` enables a shared pip cache. Do not enable a shared
+cache for dependency resolution based on pull request files.
+
 ## publish-docs.yml
 
 `publish-docs.yml` standardizes the common documentation publishing skeleton:
