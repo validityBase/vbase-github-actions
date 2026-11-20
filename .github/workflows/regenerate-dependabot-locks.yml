@@ -4,9 +4,24 @@ on:
   workflow_call:
     inputs:
       lock-files:
-        description: Space-separated names from base, dev, and tools.
+        description: Space-separated lock basenames under requirements/.
         type: string
         required: true
+      allow-unsafe-lock-files:
+        description: Subset of lock basenames compiled with --allow-unsafe.
+        type: string
+        default: ""
+      python-version:
+        type: string
+        default: "3.11"
+      tooling-lock:
+        description: Basename of the hash-locked pip-compile toolchain.
+        type: string
+        default: tools
+      compile-profile:
+        description: standard or linux-wheel-cp311.
+        type: string
+        default: standard
       app-client-id:
         type: string
         required: true
@@ -46,25 +61,41 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
-          python-version: "3.11"
+          python-version: ${{ inputs.python-version }}
       - name: Regenerate configured locks
         env:
           LOCK_NAMES: ${{ inputs.lock-files }}
+          UNSAFE_LOCK_NAMES: ${{ inputs.allow-unsafe-lock-files }}
+          TOOLING_LOCK: ${{ inputs.tooling-lock }}
+          COMPILE_PROFILE: ${{ inputs.compile-profile }}
         run: |
           set -euo pipefail
           read -r -a locks <<< "$LOCK_NAMES"
+          read -r -a unsafe_locks <<< "$UNSAFE_LOCK_NAMES"
           [[ ${#locks[@]} -gt 0 ]]
+          [[ "$TOOLING_LOCK" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+          profile_args=()
+          case "$COMPILE_PROFILE" in
+            standard) ;;
+            linux-wheel-cp311)
+              [[ "$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == 3.11 ]]
+              profile_args+=(--pip-args="--only-binary=:all: --platform manylinux2014_x86_64 --python-version 3.11 --implementation cp --abi cp311")
+              ;;
+            *) echo "Unsupported compile profile: $COMPILE_PROFILE" >&2; exit 1 ;;
+          esac
           for lock in "${locks[@]}"; do
-            case "$lock" in base|dev|tools) ;; *) exit 1 ;; esac
+            [[ "$lock" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
             test -f "requirements/$lock.in"
             test -f "requirements/$lock.txt"
           done
-          python -m pip install --require-hashes -r requirements/tools.txt
+          python -m pip install --require-hashes -r "requirements/$TOOLING_LOCK.txt"
           mkdir "$RUNNER_TEMP/regenerated-locks"
           for lock in "${locks[@]}"; do
             options=()
-            if [[ "$lock" != base ]]; then options+=(--allow-unsafe); fi
-            pip-compile --strip-extras --no-annotate --generate-hashes "${options[@]}" \
+            for unsafe_lock in "${unsafe_locks[@]}"; do
+              if [[ "$lock" == "$unsafe_lock" ]]; then options+=(--allow-unsafe); fi
+            done
+            python -m piptools compile --strip-extras --no-annotate "${options[@]}" --generate-hashes "${profile_args[@]}" \
               -o "requirements/$lock.txt" "requirements/$lock.in"
             cp "requirements/$lock.txt" "$RUNNER_TEMP/regenerated-locks/"
           done
@@ -106,11 +137,12 @@ jobs:
         with:
           name: regenerated-locks-${{ github.run_attempt }}
           path: ${{ runner.temp }}/regenerated-locks
-      - name: Validate hash-only changes against the original commit
+      - name: Validate lock repair against the original commit
         id: validate
         env:
           GH_TOKEN: ${{ github.token }}
           LOCK_NAMES: ${{ inputs.lock-files }}
+          COMPILE_PROFILE: ${{ inputs.compile-profile }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PR_BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}

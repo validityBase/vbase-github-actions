@@ -9,6 +9,8 @@ from pathlib import Path
 
 HASH_LINE = rb"^([ \t]+--hash=sha256:[0-9a-f]{64})( \\\n|\n|$)"
 HASH_BLOCK = re.compile(rb"(?:" + HASH_LINE + rb")+", re.MULTILINE)
+LOCK_HEADER = re.compile(rb"\A(?:#[^\n]*\n)+")
+BINARY_ONLY_OPTION = b"--only-binary :all:\n\n"
 COMMIT_MUTATION = """
 mutation Repair($input: CreateCommitOnBranchInput!) {
   createCommitOnBranch(input: $input) { commit { oid url } }
@@ -32,6 +34,27 @@ def deduplicate(block: re.Match[bytes]) -> bytes:
     return b" \\\n".join(unique) + lines[-1][1]
 
 
+def lock_contents(repo: str, path: str, sha: str) -> bytes:
+    """Read an existing lock at a specific commit."""
+    original = api(f"repos/{repo}/contents/{path}?ref={sha}")
+    if original["type"] != "file" or original["encoding"] != "base64":
+        raise SystemExit(f"Cannot verify {path}")
+    return base64.b64decode(original["content"])
+
+
+def restores_binary_option(expected: bytes, candidate: bytes, base: bytes) -> bool:
+    """Allow restoring only the canonical Linux option present in the base lock."""
+    header = LOCK_HEADER.match(expected)
+    base_header = LOCK_HEADER.match(base)
+    if not header or not base_header or not base[base_header.end() :].startswith(BINARY_ONLY_OPTION):
+        return False
+    position = header.end()
+    return (
+        BINARY_ONLY_OPTION.rstrip() not in expected.splitlines()
+        and candidate == expected[:position] + BINARY_ONLY_OPTION + expected[position:]
+    )
+
+
 def main() -> None:
     """Validate the artifact without access to the App's write credential."""
     repo = os.environ["GITHUB_REPOSITORY"]
@@ -50,29 +73,33 @@ def main() -> None:
         raise SystemExit("PR is no longer eligible or its head has moved")
 
     names = os.environ["LOCK_NAMES"].split()
-    if not names or len(names) != len(set(names)) or set(names) - {"base", "dev", "tools"}:
+    if not names or len(names) != len(set(names)) or any(
+        not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name) for name in names
+    ):
         raise SystemExit("Invalid lock file selection")
     folder = Path(os.environ["RUNNER_TEMP"]) / "regenerated-locks"
     if {p.name for p in folder.iterdir()} != {f"{name}.txt" for name in names}:
         raise SystemExit("Unexpected artifact files")
     additions = []
+    removed_duplicates = False
     for name in names:
         artifact = folder / f"{name}.txt"
         if artifact.is_symlink() or not artifact.is_file() or artifact.stat().st_size > 1_000_000:
             raise SystemExit("Invalid lock artifact")
         path = f"requirements/{artifact.name}"
-        original = api(f"repos/{repo}/contents/{path}?ref={head}")
-        if original["type"] != "file" or original["encoding"] != "base64":
-            raise SystemExit(f"Cannot verify {path}")
-        before = base64.b64decode(original["content"])
+        before = lock_contents(repo, path, head)
         after = artifact.read_bytes()
-        if before == after:
-            continue
-        if after != HASH_BLOCK.sub(deduplicate, before):
-            raise SystemExit(f"{path}: changes are not limited to removing duplicate hashes")
-        additions.append({"path": path, "contents": base64.b64encode(after).decode("ascii")})
+        expected = HASH_BLOCK.sub(deduplicate, before)
+        if after != expected and not (
+            os.environ.get("COMPILE_PROFILE") == "linux-wheel-cp311"
+            and restores_binary_option(expected, after, lock_contents(repo, path, pr["base"]["sha"]))
+        ):
+            raise SystemExit(f"{path}: unexpected changes in regenerated lock")
+        if before != after:
+            removed_duplicates |= before != expected
+            additions.append({"path": path, "contents": base64.b64encode(after).decode("ascii")})
 
-    if additions:
+    if removed_duplicates:
         request = {
             "query": COMMIT_MUTATION,
             "variables": {
@@ -89,7 +116,7 @@ def main() -> None:
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             print("changed=true", file=output)
     else:
-        print("Locks already match; no commit needed.")
+        print("No duplicate hashes to repair; no commit needed.")
 
 
 if __name__ == "__main__":
