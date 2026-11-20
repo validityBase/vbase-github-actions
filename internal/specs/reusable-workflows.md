@@ -76,7 +76,8 @@ reapply the label.
   write. Do not pass any other secrets.
 
 Regeneration has no write credentials. The separate publish job does not
-check out the PR and only commits a result that exactly matches deleting
+check out the PR. It loads its validator from the reusable workflow's own
+commit and only commits a result that exactly matches deleting
 duplicate SHA-256 entries from the event head's locks. A moved head, missing
 label, or wider diff prevents the commit; a clean result is a no-op. The App
 commit triggers regular CI.
