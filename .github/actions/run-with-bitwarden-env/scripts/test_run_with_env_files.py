@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 import run_with_env_files
+from _bitwarden_runtime import project_files
 
 
 class ParseProjectsTests(unittest.TestCase):
@@ -94,13 +95,13 @@ class ParseProjectsTests(unittest.TestCase):
 class RunWithEnvFilesTests(unittest.TestCase):
     """Verify file-path scoping and cleanup around the caller command."""
 
-    @mock.patch.object(run_with_env_files, "run_with_scoped_masks")
+    @mock.patch.object(project_files, "run_with_scoped_masks")
     def test_dump_project_keeps_access_token_out_of_command_arguments(
         self, run_mock: mock.Mock
     ) -> None:
         """The helper references token env names instead of embedding secrets."""
         run_mock.return_value = 0
-        project = run_with_env_files.ProjectConfig(
+        project = project_files.ProjectConfig(
             project="app-docker",
             project_id=None,
             token_env="APP_TOKEN",
@@ -109,11 +110,11 @@ class RunWithEnvFilesTests(unittest.TestCase):
             backend="api",
         )
 
-        return_code = run_with_env_files.dump_project(
+        return_code = project_files.dump_project(
             project,
             Path("app.env"),
             {"APP_TOKEN": "sensitive-token"},
-            run_with_env_files.ScopedMaskFilter(),
+            project_files.ScopedMaskFilter(),
         )
 
         self.assertEqual(0, return_code)

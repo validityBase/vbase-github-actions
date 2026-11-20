@@ -7,7 +7,10 @@ import sys
 from pathlib import Path
 from typing import Mapping
 
-from scoped_output import run_with_scoped_masks
+ACTIONS_PATH = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ACTIONS_PATH))
+
+from _bitwarden_runtime.scoped_output import run_with_scoped_masks  # noqa: E402
 
 
 def run_with_env(environ: Mapping[str, str], working_directory: Path) -> int:
