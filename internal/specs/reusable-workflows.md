@@ -70,13 +70,18 @@ reapply the label.
 
 - `lock-files`: space-separated basenames for matching
   `requirements/<name>.in` and `.txt` files.
+- `repair-paths`: alternative to `lock-files` for repository-relative paths
+  to pip-compile-generated `.txt` locks. This mode removes duplicate hash
+  rows from allowlisted locks modified by the PR without invoking pip-compile
+  or checking out PR files. Existing lock validation in the caller's CI
+  still checks the result.
 - `allow-unsafe-lock-files`: subset compiled with `--allow-unsafe`.
 - `python-version` and `tooling-lock`: Python version and hash-locked tooling
   basename under `requirements/`; default to `3.11` and `tools`.
 - `compile-profile`: `standard` (default), or `linux-wheel-cp311` for the
   binary-only manylinux2014 x86-64 / CPython 3.11 settings used by the pilot.
 
-Regeneration has no write credentials. Only the separate publish job can
+Compilation has no write credentials. Only the separate publish job can
 write with the built-in `GITHUB_TOKEN`. It does not
 check out the PR. It loads its validator from the reusable workflow's own
 commit and only commits a result that exactly matches deleting
