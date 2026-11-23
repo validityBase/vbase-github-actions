@@ -19,7 +19,7 @@ mutation Repair($input: CreateCommitOnBranchInput!) {
 
 
 def api(endpoint: str) -> dict:
-    """Read GitHub metadata using the job's read-only token."""
+    """Read GitHub metadata using the workflow token."""
     return json.loads(subprocess.check_output(["gh", "api", endpoint]))
 
 
@@ -56,7 +56,7 @@ def restores_binary_option(expected: bytes, candidate: bytes, base: bytes) -> bo
 
 
 def main() -> None:
-    """Validate the artifact without access to the App's write credential."""
+    """Validate the artifact before preparing a commit request."""
     repo = os.environ["GITHUB_REPOSITORY"]
     head = os.environ["PR_HEAD"]
     branch = os.environ["PR_BRANCH"]
