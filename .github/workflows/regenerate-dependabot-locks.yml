@@ -22,12 +22,6 @@ on:
         description: standard or linux-wheel-cp311.
         type: string
         default: standard
-      app-client-id:
-        type: string
-        required: true
-    secrets:
-      app-private-key:
-        required: true
 
 permissions:
   contents: read
@@ -121,6 +115,9 @@ jobs:
 
   publish:
     needs: regenerate
+    permissions:
+      contents: write
+      pull-requests: read
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -147,17 +144,10 @@ jobs:
           PR_BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python3 -I workflow-source/.github/scripts/validate-dependabot-locks.py
-      - uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
-        if: steps.validate.outputs.changed == 'true'
-        id: app-token
-        with:
-          client-id: ${{ inputs.app-client-id }}
-          private-key: ${{ secrets.app-private-key }}
-          permission-contents: write
       - name: Commit to the unchanged Dependabot head
         if: steps.validate.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh api graphql --input "$RUNNER_TEMP/lock-commit.json" \
             --jq '.data.createCommitOnBranch.commit.url'
