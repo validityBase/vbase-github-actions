@@ -1,0 +1,24 @@
+name: Dependabot lock repair tests
+
+on:
+  pull_request:
+    paths:
+      - .github/scripts/validate-dependabot-locks.py
+      - .github/scripts/tests/**
+      - .github/workflows/regenerate-dependabot-locks.yml
+      - .github/workflows/dependabot-lock-repair-tests.yml
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.11"
+      - run: python -m unittest discover -s .github/scripts/tests -v
