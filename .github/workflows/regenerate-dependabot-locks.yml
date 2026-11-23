@@ -1,0 +1,153 @@
+name: Regenerate Dependabot Python locks
+
+on:
+  workflow_call:
+    inputs:
+      lock-files:
+        description: Space-separated lock basenames under requirements/.
+        type: string
+        required: true
+      allow-unsafe-lock-files:
+        description: Subset of lock basenames compiled with --allow-unsafe.
+        type: string
+        default: ""
+      python-version:
+        type: string
+        default: "3.11"
+      tooling-lock:
+        description: Basename of the hash-locked pip-compile toolchain.
+        type: string
+        default: tools
+      compile-profile:
+        description: standard or linux-wheel-cp311.
+        type: string
+        default: standard
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  regenerate:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'regenerate-locks' &&
+      github.event.pull_request.user.id == 49699333 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'dependabot/pip/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Require a maintainer to request regeneration
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$SENDER/permission" --jq .permission)
+          case "$permission" in
+            admin|maintain|write) ;;
+            *) echo "Regeneration requires repository write access." >&2; exit 1 ;;
+          esac
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: ${{ inputs.python-version }}
+      - name: Regenerate configured locks
+        env:
+          LOCK_NAMES: ${{ inputs.lock-files }}
+          UNSAFE_LOCK_NAMES: ${{ inputs.allow-unsafe-lock-files }}
+          TOOLING_LOCK: ${{ inputs.tooling-lock }}
+          COMPILE_PROFILE: ${{ inputs.compile-profile }}
+        run: |
+          set -euo pipefail
+          read -r -a locks <<< "$LOCK_NAMES"
+          read -r -a unsafe_locks <<< "$UNSAFE_LOCK_NAMES"
+          [[ ${#locks[@]} -gt 0 ]]
+          [[ "$TOOLING_LOCK" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+          profile_args=()
+          case "$COMPILE_PROFILE" in
+            standard) ;;
+            linux-wheel-cp311)
+              [[ "$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" == 3.11 ]]
+              profile_args+=(--pip-args="--only-binary=:all: --platform manylinux2014_x86_64 --python-version 3.11 --implementation cp --abi cp311")
+              ;;
+            *) echo "Unsupported compile profile: $COMPILE_PROFILE" >&2; exit 1 ;;
+          esac
+          for lock in "${locks[@]}"; do
+            [[ "$lock" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]
+            test -f "requirements/$lock.in"
+            test -f "requirements/$lock.txt"
+          done
+          python -m pip install --require-hashes -r "requirements/$TOOLING_LOCK.txt"
+          mkdir "$RUNNER_TEMP/regenerated-locks"
+          for lock in "${locks[@]}"; do
+            options=()
+            for unsafe_lock in "${unsafe_locks[@]}"; do
+              if [[ "$lock" == "$unsafe_lock" ]]; then options+=(--allow-unsafe); fi
+            done
+            python -m piptools compile --strip-extras --no-annotate "${options[@]}" --generate-hashes "${profile_args[@]}" \
+              -o "requirements/$lock.txt" "requirements/$lock.in"
+            cp "requirements/$lock.txt" "$RUNNER_TEMP/regenerated-locks/"
+          done
+          # The publish job independently validates every byte it commits.
+          git diff --name-only -z HEAD > "$RUNNER_TEMP/changed-lock-paths"
+          git ls-files --others --exclude-standard -z >> "$RUNNER_TEMP/changed-lock-paths"
+          while IFS= read -r -d '' path; do
+            allowed=false
+            for lock in "${locks[@]}"; do
+              if [[ "$path" == "requirements/$lock.txt" ]]; then allowed=true; fi
+            done
+            if [[ "$allowed" != true ]]; then
+              echo "Unexpected tracked change: $path" >&2
+              exit 1
+            fi
+          done < "$RUNNER_TEMP/changed-lock-paths"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: regenerated-locks-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/regenerated-locks
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: regenerate
+    permissions:
+      contents: write
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # Do not check out or execute anything from the PR in this job.
+      - name: Check out trusted workflow scripts
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: workflow-source
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        with:
+          name: regenerated-locks-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/regenerated-locks
+      - name: Validate lock repair against the original commit
+        id: validate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOCK_NAMES: ${{ inputs.lock-files }}
+          COMPILE_PROFILE: ${{ inputs.compile-profile }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 -I workflow-source/.github/scripts/validate-dependabot-locks.py
+      - name: Commit to the unchanged Dependabot head
+        if: steps.validate.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api graphql --input "$RUNNER_TEMP/lock-commit.json" \
+            --jq '.data.createCommitOnBranch.commit.url'
