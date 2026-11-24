@@ -6,7 +6,11 @@ on:
       lock-files:
         description: Space-separated lock basenames under requirements/.
         type: string
-        required: true
+        default: ""
+      repair-paths:
+        description: Space-separated generated lock paths for hash-only repair instead of pip-compile.
+        type: string
+        default: ""
       allow-unsafe-lock-files:
         description: Subset of lock basenames compiled with --allow-unsafe.
         type: string
@@ -50,13 +54,16 @@ jobs:
             *) echo "Regeneration requires repository write access." >&2; exit 1 ;;
           esac
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        if: inputs.repair-paths == ''
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        if: inputs.repair-paths == ''
         with:
           python-version: ${{ inputs.python-version }}
       - name: Regenerate configured locks
+        if: inputs.repair-paths == ''
         env:
           LOCK_NAMES: ${{ inputs.lock-files }}
           UNSAFE_LOCK_NAMES: ${{ inputs.allow-unsafe-lock-files }}
@@ -107,6 +114,7 @@ jobs:
             fi
           done < "$RUNNER_TEMP/changed-lock-paths"
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: inputs.repair-paths == ''
         with:
           name: regenerated-locks-${{ github.run_attempt }}
           path: ${{ runner.temp }}/regenerated-locks
@@ -131,6 +139,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/scripts
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
+        if: inputs.repair-paths == ''
         with:
           name: regenerated-locks-${{ github.run_attempt }}
           path: ${{ runner.temp }}/regenerated-locks
@@ -139,6 +148,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           LOCK_NAMES: ${{ inputs.lock-files }}
+          REPAIR_PATHS: ${{ inputs.repair-paths }}
           COMPILE_PROFILE: ${{ inputs.compile-profile }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
           PR_BRANCH: ${{ github.event.pull_request.head.ref }}
