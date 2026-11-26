@@ -61,7 +61,7 @@ Important inputs:
 
 ## regenerate-dependabot-locks.yml
 
-Opt-in repair for duplicate hashes in pip-compile locks. A maintainer with
+Opt-in repair for pip-compile locks in Dependabot PRs. A maintainer with
 repository write access adds `regenerate-locks` to an open, same-repository
 Dependabot pip PR. The caller listens for `pull_request_target: labeled` and
 grants `contents: write` and `pull-requests: read`. No caller secrets are
@@ -84,14 +84,13 @@ reapply the label.
 Compilation has no write credentials. Only the separate publish job can
 write with the built-in `GITHUB_TOKEN`. It does not
 check out the PR. It loads its validator from the reusable workflow's own
-commit and only commits a result that exactly matches deleting
-duplicate SHA-256 entries from the event head's locks. In the Linux profile it
-may also restore the `--only-binary :all:` header option if the base lock
-already has it. That option alone never triggers a commit. A moved head,
-missing label, or wider diff prevents the commit. After the commit, a
-maintainer may need to approve the resulting PR check runs. Push-triggered
-workflows do not run for commits made with `GITHUB_TOKEN`. Neither behavior
-changes the PR's merge approval requirements.
+commit and only commits duplicate SHA-256 removal or, in the Linux profile,
+restoration of the `--only-binary :all:` header option from the base lock.
+Either repair can be committed on its own; all other content must remain
+unchanged. A moved head, missing label, or wider diff prevents the commit.
+After the commit, a maintainer may need to approve the resulting PR check
+runs. Push-triggered workflows do not run for commits made with
+`GITHUB_TOKEN`. Neither behavior changes the PR's merge approval requirements.
 
 The regeneration job uses the pinned Python setup action directly because
 `setup-python-deps` enables a shared pip cache. Do not enable a shared

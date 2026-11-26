@@ -95,7 +95,6 @@ def validate_regenerated_locks(repo: str, head: str, names: list[str], base_sha:
     if {p.name for p in folder.iterdir()} != {f"{name}.txt" for name in names}:
         raise SystemExit("Unexpected artifact files")
     repairs = {}
-    removed_duplicates = False
     for name in names:
         artifact = folder / f"{name}.txt"
         if artifact.is_symlink() or not artifact.is_file() or artifact.stat().st_size > 1_000_000:
@@ -110,9 +109,8 @@ def validate_regenerated_locks(repo: str, head: str, names: list[str], base_sha:
         ):
             raise SystemExit(f"{path}: unexpected changes in regenerated lock")
         if before != after:
-            removed_duplicates |= before != expected
             repairs[path] = after
-    return repairs if removed_duplicates else {}
+    return repairs
 
 
 def main() -> None:
@@ -153,7 +151,7 @@ def main() -> None:
                 "input": {
                     "branch": {"repositoryNameWithOwner": repo, "branchName": branch},
                     "expectedHeadOid": head,
-                    "message": {"headline": "Remove duplicate dependency lock hashes"},
+                    "message": {"headline": "Repair Dependabot dependency locks"},
                     "fileChanges": {"additions": additions},
                 },
             },
@@ -163,7 +161,7 @@ def main() -> None:
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
             print("changed=true", file=output)
     else:
-        print("No duplicate hashes to repair; no commit needed.")
+        print("No lock repairs needed; no commit needed.")
 
 
 if __name__ == "__main__":
