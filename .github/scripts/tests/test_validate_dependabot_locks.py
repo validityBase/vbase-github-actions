@@ -65,3 +65,37 @@ class LockRepairTests(unittest.TestCase):
                 lock.write_bytes(AFTER.replace(b"1.0", b"2.0"))
                 with self.assertRaisesRegex(SystemExit, "unexpected changes"):
                     validate.validate_regenerated_locks("org/repo", "head", ["dev"], "base")
+
+    def test_linux_profile_restores_binary_option_without_duplicate_hashes(self):
+        restored = HEADER + validate.BINARY_ONLY_OPTION + AFTER[len(HEADER):]
+        path = "requirements/dev.txt"
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / "regenerated-locks"
+            folder.mkdir()
+            artifact = folder / "dev.txt"
+            artifact.write_bytes(restored)
+            with patch.dict(os.environ, RUNNER_TEMP=temp, COMPILE_PROFILE="linux-wheel-cp311"), \
+                 patch.object(validate, "lock_contents", side_effect=[AFTER, restored]):
+                self.assertEqual(
+                    validate.validate_regenerated_locks("org/repo", "head", ["dev"], "base"),
+                    {path: restored},
+                )
+
+    def test_binary_option_restoration_rejects_unapproved_changes(self):
+        restored = HEADER + validate.BINARY_ONLY_OPTION + AFTER[len(HEADER):]
+        cases = [
+            ("not in base", "linux-wheel-cp311", AFTER, restored),
+            ("standard profile", "standard", restored, restored),
+            ("dependency pin changed", "linux-wheel-cp311", restored, restored.replace(b"1.0", b"2.0")),
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / "regenerated-locks"
+            folder.mkdir()
+            artifact = folder / "dev.txt"
+            for description, profile, base, candidate in cases:
+                with self.subTest(description=description):
+                    artifact.write_bytes(candidate)
+                    with patch.dict(os.environ, RUNNER_TEMP=temp, COMPILE_PROFILE=profile), \
+                         patch.object(validate, "lock_contents", side_effect=[AFTER, base]):
+                        with self.assertRaisesRegex(SystemExit, "unexpected changes"):
+                            validate.validate_regenerated_locks("org/repo", "head", ["dev"], "base")
